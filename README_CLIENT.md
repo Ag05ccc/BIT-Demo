@@ -1,6 +1,6 @@
 # Client Usage Guide
 
-The client runs on the Test PC and provides a terminal UI to interact with the Jetson server.
+The client runs on the Test PC and provides a terminal UI to interact with the Jetson server. For a browser-based interface, use the [Web GUI](#web-gui-alternative) instead.
 
 ## Installation
 
@@ -35,6 +35,12 @@ Edit `client/client_config.json`:
 }
 ```
 
+For local development (server running on same machine):
+
+```bash
+python test_client.py --config client_config_local.json run
+```
+
 ## Commands
 
 ### Run All Tests
@@ -47,7 +53,7 @@ This will:
 1. Connect to the Jetson server
 2. Start all test checks
 3. Display live progress with rich UI
-4. Show final summary
+4. Show final summary with solution hints for any failures
 
 Example output:
 
@@ -69,6 +75,13 @@ Starting test run...
 │ ✗ fail │ autopilot  │ Detect       │ No heartbeat │   10.1s  │
 └────────┴────────────┴──────────────┴──────────────┴──────────┘
 
+╭───────────── Suggested Solutions ─────────────╮
+│ AutopilotDetectCheck (failed):                │
+│   1. Check the autopilot cable connection     │
+│   2. Verify power to the autopilot board      │
+│   3. Check baud rate in config.json           │
+╰───────────────────────────────────────────────╯
+
 ╭───────────── TEST FAILED ──────────────╮
 │ ✓ Passed:   32/35                      │
 │ ✗ Failed:   2/35                       │
@@ -86,12 +99,12 @@ python test_client.py run network
 ```
 
 Available categories:
-- `jetson` - Jetson health checks
-- `device` - Device checks
-- `network` - Network checks
-- `ros` - ROS checks
-- `autopilot` - Autopilot checks
-- `system` - System checks
+- `jetson` - Jetson health checks (boot, resources, temperature)
+- `device` - Device checks (udev, existence, permissions, handshake)
+- `network` - Network checks (interfaces, ping, Test PC connectivity)
+- `ros` - ROS checks (master, nodes, topics, rates, freshness, rosbag)
+- `autopilot` - Autopilot checks (heartbeat, status, params, sensors)
+- `system` - System checks (services, env vars, time, scripts, metadata)
 
 ### Check Server Status
 
@@ -112,7 +125,7 @@ Shows:
 python test_client.py results
 ```
 
-Displays the most recent test run results.
+Displays the most recent test run results with solution hints.
 
 ### Export Autopilot Parameters
 
@@ -129,6 +142,32 @@ python test_client.py compare-params
 ```
 
 Compares current parameters against default.param file.
+
+### Using a Custom Config
+
+```bash
+python test_client.py --config /path/to/my_config.json run
+python test_client.py --config client_config_local.json status
+```
+
+## Solution Hints
+
+When checks fail or produce warnings, the client automatically displays suggested solutions. These are actionable fix steps specific to each check and status. For example:
+
+- **AutopilotDetectCheck (failed)**: "Check the autopilot cable and power, verify baud rate..."
+- **DevicePermissionsCheck (failed)**: "Add user to dialout group, check udev rules..."
+- **ROSMasterCheck (failed)**: "Start roscore, check ROS_MASTER_URI..."
+
+## Web GUI Alternative
+
+Instead of the CLI client, you can use the browser-based Web GUI:
+
+1. Start the server: `python3 server/test_server.py`
+2. Open `http://<jetson-ip>:5000` in a browser
+3. Click "Run All Tests" or select a category
+4. View live results, solution hints, and export JSON
+
+The Web GUI provides the same functionality as the CLI client with a visual interface.
 
 ## Exit Codes
 
@@ -165,7 +204,7 @@ Check:
 
 ### Test results not updating
 
-- Server may be busy with another test
+- Server may be busy with another test (only one test can run at a time)
 - Check server logs on Jetson
 - Restart server if needed
 
@@ -190,22 +229,37 @@ results = client.get_results(test_id)
 # Check status
 if results['summary']['failed'] == 0:
     print("All tests passed!")
+else:
+    # Print failures
+    for r in results['results']:
+        if r['status'] == 'failed':
+            print(f"FAIL: {r['name']} - {r['message']}")
+            if 'solution' in r.get('details', {}):
+                print(f"  Fix: {r['details']['solution']}")
 ```
 
 ### Custom Reporting
 
-Results are available as JSON via the API, allowing custom reporting tools.
+Results are available as JSON via the API, allowing custom reporting tools:
+
+```bash
+curl http://192.168.1.2:5000/api/test/results | python -m json.tool
+```
 
 ## Configuration Options
 
 ### Display Options
 
-- `show_details`: Show detailed error messages
-- `auto_refresh`: Auto-refresh during test run
-- `refresh_interval`: Refresh rate in seconds
+| Option | Default | Description |
+|--------|---------|-------------|
+| `show_details` | `true` | Show detailed error messages |
+| `auto_refresh` | `true` | Auto-refresh during test run |
+| `refresh_interval` | `1.0` | Refresh rate in seconds |
 
 ### Export Options
 
-- `results_dir`: Directory for exported results
-- `format`: Export format (json)
-- `include_timestamp`: Add timestamp to filenames
+| Option | Default | Description |
+|--------|---------|-------------|
+| `results_dir` | `"test_results"` | Directory for exported results |
+| `format` | `"json"` | Export format |
+| `include_timestamp` | `true` | Add timestamp to filenames |

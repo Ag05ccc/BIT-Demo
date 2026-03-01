@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Test BIT</title>
+<style>
+  :root {
+    --bg: #1a1b2e;
+    --bg2: #232440;
+    --bg3: #2a2b4a;
+    --text: #e0e0e0;
+    --text2: #a0a0b0;
+    --green: #4caf50;
+    --red: #f44336;
+    --yellow: #ff9800;
+    --blue: #42a5f5;
+    --cyan: #26c6da;
+    --border: #3a3b5a;
+    --accent: #7c4dff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--bg2);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header h1 span { color: var(--accent); }
+  .server-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #666;
+  }
+  .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  /* System info bar */
+  .sys-info {
+    background: var(--bg2);
+    padding: 8px 24px;
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .sys-info span b { color: var(--text); }
+
+  /* Controls */
+  .controls {
+    padding: 20px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; transform: none; }
+  .btn-run {
+    background: var(--accent);
+    color: #fff;
+    padding: 12px 28px;
+    font-size: 15px;
+  }
+  .btn-cat {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+  .btn-cat:hover { border-color: var(--accent); }
+  .btn-cat.active { border-color: var(--accent); background: rgba(124,77,255,0.15); }
+
+  /* Summary bar */
+  .summary {
+    padding: 16px 24px;
+    display: none;
+  }
+  .summary.visible { display: block; }
+  .summary-counts {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .count-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .count-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+  .count-dot.passed { background: var(--green); }
+  .count-dot.failed { background: var(--red); }
+  .count-dot.warning { background: var(--yellow); }
+  .count-dot.skipped { background: var(--blue); }
+  .progress-bar {
+    height: 6px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+    background: linear-gradient(90deg, var(--green), var(--green));
+  }
+  .progress-fill.has-fail {
+    background: linear-gradient(90deg, var(--green) var(--pass-pct), var(--yellow) var(--pass-pct), var(--yellow) var(--warn-pct), var(--red) var(--warn-pct));
+  }
+
+  /* Running indicator */
+  .running-indicator {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    color: var(--cyan);
+    font-size: 14px;
+  }
+  .running-indicator.visible { display: flex; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* Results table */
+  .results-container {
+    padding: 0 24px 24px;
+  }
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .results-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--bg2);
+    color: var(--text2);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .results-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .results-table tr.clickable { cursor: pointer; }
+  .results-table tr.clickable:hover { background: rgba(124,77,255,0.06); }
+  .results-table tr.row-passed td:first-child { color: var(--green); }
+  .results-table tr.row-failed td:first-child { color: var(--red); }
+  .results-table tr.row-warning td:first-child { color: var(--yellow); }
+  .results-table tr.row-skipped td:first-child { color: var(--blue); }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .cat-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg3);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .msg-cell {
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dur-cell { color: var(--text2); font-family: monospace; font-size: 12px; }
+
+  /* Solution row */
+  .solution-row td {
+    padding: 0 12px 12px 44px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .solution-box {
+    background: var(--bg3);
+    border-radius: 6px;
+    padding: 10px 14px;
+    border-left: 3px solid var(--yellow);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    color: var(--text2);
+  }
+  .solution-box.fail-border { border-left-color: var(--red); }
+  .solution-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  /* Details panel */
+  .details-panel {
+    display: none;
+    position: fixed;
+    top: 0; right: 0;
+    width: 480px;
+    height: 100vh;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    z-index: 100;
+    overflow-y: auto;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.4);
+  }
+  .details-panel.open { display: block; }
+  .details-header {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg2);
+    z-index: 1;
+  }
+  .details-header h3 { font-size: 15px; }
+  .btn-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-close:hover { background: var(--bg3); }
+  .details-body {
+    padding: 16px;
+  }
+  .details-body pre {
+    background: var(--bg);
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+    color: var(--text2);
+  }
+  .detail-section {
+    margin-bottom: 16px;
+  }
+  .detail-section h4 {
+    font-size: 12px;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .detail-value {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  /* Footer */
+  .footer {
+    padding: 12px 24px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    font-size: 13px;
+    color: var(--text2);
+    position: sticky;
+    bottom: 0;
+  }
+  .footer.visible { display: flex; }
+  .btn-export {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text2);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 15px; }
+
+  /* Overlay for details panel */
+  .overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 99;
+  }
+  .overlay.open { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1><span>Product Test</span> BIT</h1>
+  <div class="server-status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Connecting...</span>
+  </div>
+</div>
+
+<!-- System Info -->
+<div class="sys-info" id="sysInfo"></div>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="btn btn-run" id="btnRunAll" onclick="runTests()">&#9654; RUN ALL TESTS</button>
+  <button class="btn btn-cat" onclick="runTests('jetson')">Jetson</button>
+  <button class="btn btn-cat" onclick="runTests('device')">Device</button>
+  <button class="btn btn-cat" onclick="runTests('network')">Network</button>
+  <button class="btn btn-cat" onclick="runTests('ros')">ROS</button>
+  <button class="btn btn-cat" onclick="runTests('autopilot')">Autopilot</button>
+  <button class="btn btn-cat" onclick="runTests('system')">System</button>
+</div>
+
+<!-- Running indicator -->
+<div class="running-indicator" id="runningIndicator">
+  <div class="spinner"></div>
+  <span id="runningText">Running checks...</span>
+</div>
+
+<!-- Summary -->
+<div class="summary" id="summary">
+  <div class="summary-counts">
+    <div class="count-item"><div class="count-dot passed"></div><span id="cntPassed">0</span> Passed</div>
+    <div class="count-item"><div class="count-dot failed"></div><span id="cntFailed">0</span> Failed</div>
+    <div class="count-item"><div class="count-dot warning"></div><span id="cntWarnings">0</span> Warnings</div>
+    <div class="count-item"><div class="count-dot skipped"></div><span id="cntSkipped">0</span> Skipped</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+</div>
+
+<!-- Results -->
+<div class="results-container">
+  <div class="empty-state" id="emptyState">
+    <div class="icon">&#128269;</div>
+    <p>Click <b>RUN ALL TESTS</b> to start checking the system</p>
+  </div>
+  <table class="results-table" id="resultsTable" style="display:none">
+    <thead>
+      <tr>
+        <th style="width:80px">Status</th>
+        <th style="width:100px">Category</th>
+        <th>Check</th>
+        <th>Message</th>
+        <th style="width:70px;text-align:right">Time</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</div>
+
+<!-- Footer -->
+<div class="footer" id="footer">
+  <div>
+    <span id="footerTestId"></span> &nbsp;|&nbsp; <span id="footerDuration"></span>
+  </div>
+  <button class="btn btn-export" onclick="exportJSON()">Export JSON</button>
+</div>
+
+<!-- Details panel -->
+<div class="overlay" id="overlay" onclick="closeDetails()"></div>
+<div class="details-panel" id="detailsPanel">
+  <div class="details-header">
+    <h3 id="detailsTitle">Check Details</h3>
+    <button class="btn-close" onclick="closeDetails()">&times;</button>
+  </div>
+  <div class="details-body" id="detailsBody"></div>
+</div>
+
+<script>
+const API = '';
+let currentTestId = null;
+let currentResults = null;
+let pollTimer = null;
+let isRunning = false;
+
+const statusIcons = {
+  passed: '\u2713',
+  failed: '\u2717',
+  warning: '\u26a0',
+  skipped: '\u25cb',
+  running: '\u27f3',
+  pending: '...'
+};
+
+// ---- Init ----
+window.addEventListener('load', () => {
+  checkServerStatus();
+  setInterval(checkServerStatus, 15000);
+});
+
+async function checkServerStatus() {
+  try {
+    const res = await fetch(API + '/api/status');
+    const data = await res.json();
+    document.getElementById('statusDot').className = 'status-dot online';
+    document.getElementById('statusText').textContent = data.hostname || 'Online';
+    loadSystemInfo();
+  } catch (e) {
+    document.getElementById('statusDot').className = 'status-dot offline';
+    document.getElementById('statusText').textContent = 'Offline';
+  }
+}
+
+async function loadSystemInfo() {
+  try {
+    const res = await fetch(API + '/api/system/info');
+    const data = await res.json();
+    const el = document.getElementById('sysInfo');
+    el.innerHTML =
+      `<span>Host: <b>${data.hostname || '?'}</b></span>` +
+      `<span>OS: <b>${data.os_version || '?'}</b></span>` +
+      `<span>CPU: <b>${data.cpu_count || '?'} cores</b></span>` +
+      `<span>RAM: <b>${(data.total_ram_gb || 0).toFixed(1)} GB</b></span>` +
+      `<span>Disk: <b>${(data.total_disk_gb || 0).toFixed(1)} GB</b></span>`;
+  } catch (e) {}
+}
+
+// ---- Run Tests ----
+async function runTests(category) {
+  if (isRunning) return;
+  isRunning = true;
+
+  // Reset UI
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsTable').style.display = 'table';
+  document.getElementById('resultsBody').innerHTML = '';
+  document.getElementById('summary').classList.add('visible');
+  document.getElementById('footer').classList.remove('visible');
+  document.getElementById('runningIndicator').classList.add('visible');
+  document.getElementById('runningText').textContent =
+    category ? `Running ${category} checks...` : 'Running all checks...';
+  setButtons(true);
+  updateSummary({total:0, passed:0, failed:0, warnings:0, skipped:0});
+
+  try {
+    const endpoint = category ? `/api/test/run/${category}` : '/api/test/run';
+    const res = await fetch(API + endpoint, { method: 'POST' });
+    const data = await res.json();
+
+    if (data.error) {
+      alert('Error: ' + data.error);
+      stopRunning();
+      return;
+    }
+
+    currentTestId = data.test_id;
+    pollResults();
+  } catch (e) {
+    alert('Failed to start test: ' + e.message);
+    stopRunning();
+  }
+}
+
+function pollResults() {
+  if (!currentTestId) return;
+
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(API + `/api/test/results/${currentTestId}`);
+      const data = await res.json();
+      currentResults = data;
+
+      renderResults(data.results || []);
+      updateSummary(data.summary || {});
+
+      if (data.status === 'completed') {
+        clearInterval(pollTimer);
+        stopRunning();
+        showFooter(data);
+      }
+    } catch (e) {
+      // Keep polling
+    }
+  }, 500);
+}
+
+function stopRunning() {
+  isRunning = false;
+  document.getElementById('runningIndicator').classList.remove('visible');
+  setButtons(false);
+}
+
+function setButtons(disabled) {
+  document.getElementById('btnRunAll').disabled = disabled;
+  document.querySelectorAll('.btn-cat').forEach(b => b.disabled = disabled);
+}
+
+// ---- Render Results ----
+function renderResults(results) {
+  const tbody = document.getElementById('resultsBody');
+  // Only add new rows
+  const existing = tbody.querySelectorAll('tr.check-row').length;
+  const solExisting = tbody.querySelectorAll('tr.solution-row').length;
+
+  for (let i = existing; i < results.length; i++) {
+    const r = results[i];
+    const icon = statusIcons[r.status] || '?';
+    const rowClass = 'row-' + r.status;
+
+    // Main row
+    const tr = document.createElement('tr');
+    tr.className = `check-row clickable ${rowClass}`;
+    tr.onclick = () => openDetails(r);
+    tr.innerHTML =
+      `<td><span class="status-badge">${icon} ${r.status}</span></td>` +
+      `<td><span class="cat-badge">${esc(r.category)}</span></td>` +
+      `<td>${esc(cleanName(r.name))}</td>` +
+      `<td class="msg-cell" title="${esc(r.message)}">${esc(r.message)}</td>` +
+      `<td class="dur-cell" style="text-align:right">${(r.duration||0).toFixed(2)}s</td>`;
+    tbody.appendChild(tr);
+
+    // Solution row for failed/warning
+    const solution = r.details && r.details.solution;
+    if (solution && (r.status === 'failed' || r.status === 'warning')) {
+      const solTr = document.createElement('tr');
+      solTr.className = 'solution-row';
+      const borderClass = r.status === 'failed' ? 'fail-border' : '';
+      solTr.innerHTML =
+        `<td colspan="5"><div class="solution-box ${borderClass}">` +
+        `<div class="solution-title">\ud83d\udee0 How to fix:</div>${esc(solution)}</div></td>`;
+      tbody.appendChild(solTr);
+    }
+  }
+}
+
+function cleanName(name) {
+  // Remove 'Sim' prefix from simulated check names
+  return name.replace(/^Sim/, '');
+}
+
+function updateSummary(s) {
+  document.getElementById('cntPassed').textContent = s.passed || 0;
+  document.getElementById('cntFailed').textContent = s.failed || 0;
+  document.getElementById('cntWarnings').textContent = s.warnings || 0;
+  document.getElementById('cntSkipped').textContent = s.skipped || 0;
+
+  const total = s.total || 0;
+  const pct = total > 0 ? ((s.passed || 0) / total * 100) : 0;
+  const fill = document.getElementById('progressFill');
+  fill.style.width = (total > 0 ? 100 : 0) + '%';
+
+  if (total > 0 && ((s.failed || 0) > 0 || (s.warnings || 0) > 0)) {
+    const passPct = (s.passed || 0) / total * 100;
+    const warnPct = passPct + (s.warnings || 0) / total * 100;
+    fill.className = 'progress-fill has-fail';
+    fill.style.setProperty('--pass-pct', passPct + '%');
+    fill.style.setProperty('--warn-pct', warnPct + '%');
+  } else {
+    fill.className = 'progress-fill';
+  }
+}
+
+function showFooter(data) {
+  const el = document.getElementById('footer');
+  el.classList.add('visible');
+
+  document.getElementById('footerTestId').textContent = 'Test: ' + (data.test_id || '?');
+
+  // Calculate duration
+  if (data.started && data.completed) {
+    const start = new Date(data.started);
+    const end = new Date(data.completed);
+    const dur = ((end - start) / 1000).toFixed(1);
+    document.getElementById('footerDuration').textContent = 'Duration: ' + dur + 's';
+  } else {
+    // Sum individual durations
+    const total = (data.results || []).reduce((sum, r) => sum + (r.duration || 0), 0);
+    document.getElementById('footerDuration').textContent = 'Duration: ' + total.toFixed(1) + 's';
+  }
+}
+
+// ---- Details Panel ----
+function openDetails(result) {
+  const panel = document.getElementById('detailsPanel');
+  const overlay = document.getElementById('overlay');
+  const body = document.getElementById('detailsBody');
+
+  document.getElementById('detailsTitle').textContent = cleanName(result.name);
+
+  let html = '';
+
+  // Status
+  const icon = statusIcons[result.status] || '?';
+  const color = {passed:'var(--green)',failed:'var(--red)',warning:'var(--yellow)',skipped:'var(--blue)'}[result.status] || 'var(--text)';
+  html += `<div class="detail-section"><h4>Status</h4><div class="detail-value" style="color:${color}">${icon} ${result.status}</div></div>`;
+
+  // Category
+  html += `<div class="detail-section"><h4>Category</h4><div class="detail-value">${esc(result.category)}</div></div>`;
+
+  // Message
+  html += `<div class="detail-section"><h4>Message</h4><div class="detail-value">${esc(result.message)}</div></div>`;
+
+  // Duration
+  html += `<div class="detail-section"><h4>Duration</h4><div class="detail-value">${(result.duration||0).toFixed(3)}s</div></div>`;
+
+  // Solution
+  if (result.details && result.details.solution) {
+    html += `<div class="detail-section"><h4>Solution</h4><div class="solution-box${result.status==='failed'?' fail-border':''}" style="margin-top:4px"><div class="solution-title">\ud83d\udee0 How to fix:</div>${esc(result.details.solution)}</div></div>`;
+  }
+
+  // Full details (without solution to avoid duplication)
+  const detailsCopy = Object.assign({}, result.details || {});
+  delete detailsCopy.solution;
+  if (Object.keys(detailsCopy).length > 0) {
+    html += `<div class="detail-section"><h4>Details</h4><pre>${esc(JSON.stringify(detailsCopy, null, 2))}</pre></div>`;
+  }
+
+  // Timestamp
+  if (result.timestamp) {
+    html += `<div class="detail-section"><h4>Timestamp</h4><div class="detail-value" style="font-family:monospace;font-size:12px">${esc(result.timestamp)}</div></div>`;
+  }
+
+  body.innerHTML = html;
+  panel.classList.add('open');
+  overlay.classList.add('open');
+}
+
+function closeDetails() {
+  document.getElementById('detailsPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDetails();
+});
+
+// ---- Export ----
+function exportJSON() {
+  if (!currentResults) return;
+  const blob = new Blob([JSON.stringify(currentResults, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `test_results_${currentResults.test_id || 'export'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---- Util ----
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

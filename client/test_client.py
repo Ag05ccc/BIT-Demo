@@ -30,17 +30,18 @@ from common.constants import (
 console = Console()
 
 
-def load_config():
+def load_config(config_path=None):
     """Load client configuration"""
-    config_path = os.path.join(os.path.dirname(__file__), 'client_config.json')
+    if config_path is None:
+        config_path = os.path.join(os.path.dirname(__file__), 'client_config.json')
     try:
         with open(config_path, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        console.print(f"[red]✗ Configuration file not found: {config_path}[/red]")
+        console.print(f"[red]\u2717 Configuration file not found: {config_path}[/red]")
         sys.exit(1)
     except json.JSONDecodeError as e:
-        console.print(f"[red]✗ Error parsing config file: {e}[/red]")
+        console.print(f"[red]\u2717 Error parsing config file: {e}[/red]")
         sys.exit(1)
 
 
@@ -79,6 +80,31 @@ def create_results_table(test_run_dict):
         )
 
     return table
+
+
+def print_solutions(test_run_dict):
+    """Print solution hints for failed/warning checks."""
+    issues = [r for r in test_run_dict.get('results', [])
+              if r.get('status') in ('failed', 'warning', 'skipped')
+              and r.get('details', {}).get('solution')]
+
+    if not issues:
+        return
+
+    console.print()
+    console.print(Panel("[bold]Suggested Solutions[/bold]", border_style="cyan"))
+
+    for result in issues:
+        status = result['status']
+        symbol, color = get_status_symbol_and_color(status)
+        name = result.get('name', 'Unknown')
+        message = result.get('message', '')
+        solution = result['details']['solution']
+
+        console.print(f"\n[{color}]{symbol} {name}[/{color}] - {message}")
+        console.print(f"[dim]  How to fix:[/dim]")
+        for line in solution.strip().split('\n'):
+            console.print(f"    {line}")
 
 
 def create_summary_panel(summary):
@@ -155,6 +181,9 @@ def run_tests_command(client, category=None):
         summary_panel = create_summary_panel(results.get('summary', {}))
         console.print(summary_panel)
 
+        # Show solution hints for failed/warning checks
+        print_solutions(results)
+
         # Return exit code
         failed = results.get('summary', {}).get('failed', 0)
         return 1 if failed > 0 else 0
@@ -205,6 +234,9 @@ def results_command(client):
         console.print("\n")
         console.print(summary_panel)
 
+        # Show solution hints for failed/warning checks
+        print_solutions(results)
+
         return 0
 
     except Exception as e:
@@ -218,11 +250,13 @@ def main():
     parser.add_argument('command', choices=['run', 'status', 'results', 'export-params', 'compare-params'],
                         help='Command to execute')
     parser.add_argument('category', nargs='?', help='Test category (for run command)')
+    parser.add_argument('--config', type=str, default=None,
+                        help='Path to client config file (default: client_config.json)')
 
     args = parser.parse_args()
 
     # Load configuration
-    config = load_config()
+    config = load_config(args.config)
 
     # Create API client
     jetson_config = config.get('jetson', {})

@@ -26,13 +26,15 @@ class SystemdServicesCheck(BaseCheck):
             active = []
             inactive = []
 
+            cmd_timeout = self.config.get('timeouts', {}).get('command', 10)
+
             for service in services:
                 try:
                     result = subprocess.run(
                         ['systemctl', 'is-active', service],
                         capture_output=True,
                         text=True,
-                        timeout=5
+                        timeout=cmd_timeout
                     )
 
                     if result.stdout.strip() == 'active':
@@ -142,11 +144,12 @@ class TimeCheck(BaseCheck):
             # Check NTP sync (if available)
             ntp_synced = False
             try:
+                cmd_timeout = self.config.get('timeouts', {}).get('command', 10)
                 result = subprocess.run(
                     ['timedatectl', 'status'],
                     capture_output=True,
                     text=True,
-                    timeout=5
+                    timeout=cmd_timeout
                 )
 
                 if 'NTP synchronized: yes' in result.stdout or 'System clock synchronized: yes' in result.stdout:
@@ -193,11 +196,12 @@ class StartupScriptCheck(BaseCheck):
                 return False
 
             # Execute script
+            script_timeout = self.config.get('timeouts', {}).get('script', 60)
             result = subprocess.run(
                 [script_path],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=script_timeout
             )
 
             self.details = {
@@ -245,11 +249,12 @@ class LoggingCheck(BaseCheck):
                 return False
 
             # Execute script
+            script_timeout = self.config.get('timeouts', {}).get('script', 60)
             result = subprocess.run(
                 [script_path],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=script_timeout
             )
 
             self.details = {
@@ -292,11 +297,12 @@ class MetadataCaptureCheck(BaseCheck):
 
             # Try to get git commit hash (if in a git repo)
             try:
+                cmd_timeout = self.config.get('timeouts', {}).get('command', 10)
                 result = subprocess.run(
                     ['git', 'rev-parse', 'HEAD'],
                     capture_output=True,
                     text=True,
-                    timeout=5,
+                    timeout=cmd_timeout,
                     cwd=os.path.dirname(__file__)
                 )
                 if result.returncode == 0:

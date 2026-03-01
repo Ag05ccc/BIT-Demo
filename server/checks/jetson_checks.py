@@ -20,7 +20,7 @@ class JetsonBootCheck(BaseCheck):
                 ['dmesg', '--level=err,crit,alert,emerg'],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=self.config.get('timeouts', {}).get('command', 10)
             )
 
             error_lines = [line for line in result.stdout.strip().split('\n') if line]
@@ -172,7 +172,7 @@ class JetsonTemperatureCheck(BaseCheck):
                 self.status = "failed"
                 self.message = f"Temperature too high: {max_temp:.1f}°C (max: {temp_max}°C)"
                 return False
-            elif max_temp > temp_max * 0.9:  # Warning if > 90% of max
+            elif max_temp > temp_max * self.config.get('resources', {}).get('temp_warning_percent', 90) / 100.0:
                 self.warn(
                     f"Temperature approaching limit: {max_temp:.1f}°C (max: {temp_max}°C)",
                     self.details

@@ -6,9 +6,10 @@ Runs on Jetson and provides test execution services to Test PC client.
 import sys
 import os
 import json
+import time
 import threading
 from datetime import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
 # Add parent directory to path
@@ -155,6 +156,12 @@ def run_tests_async(categories=None, test_id=None):
         test_runs[test_id] = test_run
 
     print(f"✓ Test run {test_id} completed: {passed}/{total} passed")
+
+
+@app.route('/')
+def web_gui():
+    """Serve the web GUI"""
+    return render_template('index.html')
 
 
 @app.route(API_STATUS, methods=['GET'])
@@ -308,15 +315,55 @@ def run_log_test_script():
 
 if __name__ == '__main__':
     import time
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Product Test BIT Server")
+    parser.add_argument('--sim', action='store_true',
+                        help='Run in simulation mode (no hardware required)')
+    parser.add_argument('--config', type=str, default=None,
+                        help='Path to config file (default: config.json, or config_local.json with --sim)')
+    server_args = parser.parse_args()
+
+    # Determine config file
+    if server_args.config:
+        config_file = server_args.config
+    elif server_args.sim:
+        config_file = os.path.join(os.path.dirname(__file__), 'config_local.json')
+    else:
+        config_file = None  # Will use default config.json
 
     print("=" * 60)
-    print(" Product Test BIT Server".center(60))
+    if server_args.sim:
+        print(" Product Test BIT Server [SIMULATION MODE]".center(60))
+    else:
+        print(" Product Test BIT Server".center(60))
     print("=" * 60)
     print()
 
     # Load configuration
-    if not load_config():
-        sys.exit(1)
+    if config_file:
+        # Load from specified path
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            print(f"\u2713 Configuration loaded from {config_file}")
+        except FileNotFoundError:
+            print(f"\u2717 Configuration file not found: {config_file}")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"\u2717 Error parsing config file: {e}")
+            sys.exit(1)
+    else:
+        if not load_config():
+            sys.exit(1)
+
+    # Swap to simulated checks if --sim
+    if server_args.sim:
+        from checks.sim_checks import SIM_CHECK_CLASSES
+        CHECK_CLASSES.clear()
+        CHECK_CLASSES.update(SIM_CHECK_CLASSES)
+        print("\u2713 Simulation mode active - using simulated checks")
+        print("  No hardware, sensors, or ROS required")
 
     # Get server config
     server_config = config.get('server', {})
@@ -327,7 +374,10 @@ if __name__ == '__main__':
     print(f"\nStarting server on {host}:{port}...")
     print(f"Debug mode: {debug}")
     print()
-    print("Available endpoints:")
+    gui_host = '127.0.0.1' if host == '0.0.0.0' else host
+    print(f"Web GUI:  http://{gui_host}:{port}")
+    print()
+    print("API endpoints:")
     print(f"  GET  {API_STATUS}")
     print(f"  GET  {API_SYSTEM_INFO}")
     print(f"  POST {API_TEST_RUN}")

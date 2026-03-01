@@ -15,12 +15,14 @@ class NetworkInterfaceCheck(BaseCheck):
 
     def run(self) -> bool:
         try:
+            cmd_timeout = self.config.get('timeouts', {}).get('command', 10)
+
             # Use ip command to get interface status
             result = subprocess.run(
                 ['ip', 'link', 'show'],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=cmd_timeout
             )
 
             output = result.stdout
@@ -75,17 +77,21 @@ class PingTestCheck(BaseCheck):
                 self.skip("No ping targets configured")
                 return False
 
+            network_config = self.config.get('network', {})
+            ping_count = str(network_config.get('ping_count', 3))
+            ping_timeout = str(network_config.get('ping_timeout', 3))
+            cmd_timeout = self.config.get('timeouts', {}).get('command', 10)
+
             reachable = []
             unreachable = []
 
             for target in ping_targets:
                 try:
-                    # Ping with count=3, timeout=3 seconds
                     result = subprocess.run(
-                        ['ping', '-c', '3', '-W', '3', target],
+                        ['ping', '-c', ping_count, '-W', ping_timeout, target],
                         capture_output=True,
                         text=True,
-                        timeout=10
+                        timeout=cmd_timeout
                     )
 
                     if result.returncode == 0:
@@ -142,11 +148,16 @@ class TestPCConnectivityCheck(BaseCheck):
                 return False
 
             # Try to ping Test PC
+            network_config = self.config.get('network', {})
+            ping_count = str(network_config.get('ping_count', 3))
+            ping_timeout = str(network_config.get('ping_timeout', 3))
+            cmd_timeout = self.config.get('timeouts', {}).get('command', 10)
+
             result = subprocess.run(
-                ['ping', '-c', '3', '-W', '3', test_pc_ip],
+                ['ping', '-c', ping_count, '-W', ping_timeout, test_pc_ip],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=cmd_timeout
             )
 
             if result.returncode == 0:

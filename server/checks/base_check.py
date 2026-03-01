@@ -24,6 +24,7 @@ from common.constants import (
     CATEGORY_AUTOPILOT,
     CATEGORY_SYSTEM
 )
+from checks.solutions import get_solution
 
 
 class BaseCheck(ABC):
@@ -90,6 +91,12 @@ class BaseCheck(ABC):
             self.details["exception_type"] = type(e).__name__
         finally:
             self.duration = time.time() - start_time
+
+        # Attach solution hint for non-passed statuses
+        if self.status in ("failed", "warning", "skipped"):
+            solution = get_solution(self.__class__.__name__, self.status)
+            if solution:
+                self.details["solution"] = solution
 
         return self.get_result()
 

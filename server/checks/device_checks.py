@@ -147,7 +147,7 @@ class DeviceHardwareIDCheck(BaseCheck):
                         ['udevadm', 'info', '--name=' + device_path, '--attribute-walk'],
                         capture_output=True,
                         text=True,
-                        timeout=5
+                        timeout=self.config.get('timeouts', {}).get('command', 10)
                     )
 
                     output = result.stdout
@@ -280,14 +280,15 @@ class DeviceHandshakeCheck(BaseCheck):
                     ser = serial.Serial(
                         port=device_path,
                         baudrate=device_info.get('baudrate', 9600),
-                        timeout=2
+                        timeout=device_info.get('serial_timeout', 2)
                     )
 
                     # Send command
                     ser.write(test_command.encode())
 
                     # Read response
-                    response = ser.read(200).decode('utf-8', errors='ignore')
+                    read_size = device_info.get('read_buffer_size', 200)
+                    response = ser.read(read_size).decode('utf-8', errors='ignore')
 
                     ser.close()
 

@@ -1,0 +1,17 @@
+{
+  "jetson": {
+    "ip": "127.0.0.1",
+    "port": 5000,
+    "timeout": 60
+  },
+  "display": {
+    "show_details": true,
+    "auto_refresh": true,
+    "refresh_interval": 1.0
+  },
+  "export": {
+    "results_dir": "test_results",
+    "format": "json",
+    "include_timestamp": true
+  }
+}

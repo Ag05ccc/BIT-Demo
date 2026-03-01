@@ -267,7 +267,7 @@ class TopicFreshnessCheck(BaseCheck):
 
         try:
             required_topics = self.config.get('ros', {}).get('required_topics', {})
-            max_age = 5.0  # Maximum message age in seconds
+            max_age = self.config.get('ros', {}).get('topic_freshness_timeout', 5.0)
 
             if not required_topics:
                 self.skip("No required topics configured")

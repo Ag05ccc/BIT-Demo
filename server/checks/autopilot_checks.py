@@ -101,7 +101,9 @@ class AutopilotStatusCheck(BaseCheck):
             else:
                 mav = mavutil.mavlink_connection(connection_string)
 
-            mav.wait_heartbeat(timeout=10)
+            heartbeat_timeout = autopilot_config.get('heartbeat_timeout', 10)
+            msg_timeout = autopilot_config.get('message_timeout', 5)
+            mav.wait_heartbeat(timeout=heartbeat_timeout)
 
             # Request SYS_STATUS message
             mav.mav.request_data_stream_send(
@@ -113,19 +115,21 @@ class AutopilotStatusCheck(BaseCheck):
             )
 
             # Wait for SYS_STATUS
-            msg = mav.recv_match(type='SYS_STATUS', blocking=True, timeout=5)
+            msg = mav.recv_match(type='SYS_STATUS', blocking=True, timeout=msg_timeout)
 
             if msg:
                 # Check for errors/warnings
                 errors = []
                 warnings = []
 
-                # Voltage check
+                # Voltage check (thresholds from config)
                 voltage = msg.voltage_battery / 1000.0  # mV to V
-                if voltage < 10.5:  # Adjust threshold as needed
-                    errors.append(f"Low battery: {voltage:.1f}V")
-                elif voltage < 11.1:
-                    warnings.append(f"Battery getting low: {voltage:.1f}V")
+                voltage_error = autopilot_config.get('battery_voltage_error', 10.5)
+                voltage_warning = autopilot_config.get('battery_voltage_warning', 11.1)
+                if voltage < voltage_error:
+                    errors.append(f"Low battery: {voltage:.1f}V (min: {voltage_error}V)")
+                elif voltage < voltage_warning:
+                    warnings.append(f"Battery getting low: {voltage:.1f}V (warn: {voltage_warning}V)")
 
                 # Check sensors
                 sensors_enabled = msg.onboard_control_sensors_enabled
@@ -265,14 +269,16 @@ class AutopilotSensorsCheck(BaseCheck):
             else:
                 mav = mavutil.mavlink_connection(connection_string)
 
-            mav.wait_heartbeat(timeout=10)
+            heartbeat_timeout = autopilot_config.get('heartbeat_timeout', 10)
+            msg_timeout = autopilot_config.get('message_timeout', 5)
+            mav.wait_heartbeat(timeout=heartbeat_timeout)
 
             # Check GPS
-            msg_gps = mav.recv_match(type='GPS_RAW_INT', blocking=True, timeout=5)
+            msg_gps = mav.recv_match(type='GPS_RAW_INT', blocking=True, timeout=msg_timeout)
             gps_ok = msg_gps and msg_gps.fix_type >= 3  # 3D fix
 
             # Check IMU (ATTITUDE message)
-            msg_att = mav.recv_match(type='ATTITUDE', blocking=True, timeout=5)
+            msg_att = mav.recv_match(type='ATTITUDE', blocking=True, timeout=msg_timeout)
             imu_ok = msg_att is not None
 
             self.details = {
