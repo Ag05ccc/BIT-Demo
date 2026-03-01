@@ -31,14 +31,6 @@ ALL_CATEGORIES = [
     CATEGORY_SYSTEM
 ]
 
-# Status Colors (for rich UI)
-COLOR_PASSED = "green"
-COLOR_FAILED = "red"
-COLOR_WARNING = "yellow"
-COLOR_SKIPPED = "blue"
-COLOR_RUNNING = "cyan"
-COLOR_PENDING = "white"
-
 # Status Symbols
 SYMBOL_PASSED = "✓"
 SYMBOL_FAILED = "✗"

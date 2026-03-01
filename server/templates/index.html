@@ -6,18 +6,19 @@
 <title>Product Test BIT</title>
 <style>
   :root {
-    --bg: #1a1b2e;
-    --bg2: #232440;
-    --bg3: #2a2b4a;
-    --text: #e0e0e0;
-    --text2: #a0a0b0;
-    --green: #4caf50;
-    --red: #f44336;
-    --yellow: #ff9800;
-    --blue: #42a5f5;
-    --cyan: #26c6da;
-    --border: #3a3b5a;
-    --accent: #7c4dff;
+    /* Aerospace / avionics colour palette — dark cockpit with electric-blue accent */
+    --bg:     #0c0f14;   /* near-black, blue-grey tint */
+    --bg2:    #131821;   /* header / footer panels */
+    --bg3:    #1a2232;   /* card / section fill */
+    --text:   #c8d8e8;   /* primary text: cool off-white */
+    --text2:  #4e6070;   /* secondary: steel grey */
+    --green:  #00c853;   /* NOMINAL — bright lime */
+    --red:    #ff3d3d;   /* CRITICAL — alert red */
+    --yellow: #ff9500;   /* CAUTION — amber orange */
+    --blue:   #4488cc;   /* ADVISORY — steel blue */
+    --cyan:   #00b8d4;   /* RUNNING — teal */
+    --border: #1e2d40;   /* panel edges: dark steel */
+    --accent: #1a8cff;   /* primary accent: avionics electric blue */
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
@@ -34,9 +35,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--accent);  /* electric-blue instrument-panel line */
   }
-  .header h1 { font-size: 20px; font-weight: 600; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
   .header h1 span { color: var(--accent); }
   .server-status {
     display: flex;
@@ -87,9 +88,11 @@
   .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; transform: none; }
   .btn-run {
     background: var(--accent);
-    color: #fff;
+    color: #ffffff;       /* white text on blue */
     padding: 12px 28px;
     font-size: 15px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
   }
   .btn-cat {
     background: var(--bg3);
@@ -99,7 +102,7 @@
     font-size: 13px;
   }
   .btn-cat:hover { border-color: var(--accent); }
-  .btn-cat.active { border-color: var(--accent); background: rgba(124,77,255,0.15); }
+  .btn-cat.active { border-color: var(--accent); background: rgba(26,140,255,0.12); }
 
   /* Summary bar */
   .summary {
@@ -192,7 +195,7 @@
     vertical-align: top;
   }
   .results-table tr.clickable { cursor: pointer; }
-  .results-table tr.clickable:hover { background: rgba(124,77,255,0.06); }
+  .results-table tr.clickable:hover { background: rgba(26,140,255,0.06); }
   .results-table tr.row-passed td:first-child { color: var(--green); }
   .results-table tr.row-failed td:first-child { color: var(--red); }
   .results-table tr.row-warning td:first-child { color: var(--yellow); }
@@ -333,6 +336,12 @@
     padding: 6px 14px;
     font-size: 12px;
   }
+  .btn-export-report {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+  .btn-export-report:hover { filter: brightness(1.15); }
 
   /* Empty state */
   .empty-state {
@@ -422,7 +431,10 @@
   <div>
     <span id="footerTestId"></span> &nbsp;|&nbsp; <span id="footerDuration"></span>
   </div>
-  <button class="btn btn-export" onclick="exportJSON()">Export JSON</button>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-export" onclick="exportJSON()">Export JSON</button>
+    <button class="btn btn-export btn-export-report" onclick="exportReport()" title="Download a full self-contained HTML report">Export Report</button>
+  </div>
 </div>
 
 <!-- Details panel -->
@@ -704,6 +716,14 @@ function exportJSON() {
   a.download = `test_results_${currentResults.test_id || 'export'}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportReport() {
+  if (!currentTestId) return;
+  const a = document.createElement('a');
+  a.href = `/api/report/${currentTestId}`;
+  a.download = `bit_report_${currentTestId}.html`;
+  a.click();
 }
 
 // ---- Util ----

@@ -8,9 +8,9 @@ import os
 import json
 import time
 import threading
+import logging
 from datetime import datetime
-from flask import Flask, jsonify, request, render_template
-from flask_cors import CORS
+from flask import Flask, jsonify, request, render_template, Response
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -45,13 +45,39 @@ from checks.system_checks import (
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for cross-origin requests
+
+@app.after_request
+def _add_cors(response):
+    """Allow cross-origin requests without requiring flask-cors."""
+    response.headers['Access-Control-Allow-Origin']  = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
 
 # Global state
 config = {}
 test_runs = {}  # Store test results by test_id
 current_test_id = None
 test_lock = threading.Lock()
+
+def setup_debug_logging(debug_mode: bool):
+    """
+    Configure Python logging for developer/debug mode.
+
+    Normal mode  – WARNING+ messages printed with a compact format.
+    Debug mode   – DEBUG+  messages printed with file:line references so
+                   developers can click straight to the offending source.
+    """
+    level = logging.DEBUG if debug_mode else logging.WARNING
+    fmt = (
+        "[%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s"
+        if debug_mode
+        else "[%(levelname)s] %(message)s"
+    )
+    logging.basicConfig(level=level, format=fmt, force=True)
+    # Silence Flask/Werkzeug noise unless we are in debug mode
+    logging.getLogger("werkzeug").setLevel(logging.DEBUG if debug_mode else logging.ERROR)
+
 
 # All available check classes grouped by category
 CHECK_CLASSES = {
@@ -156,6 +182,359 @@ def run_tests_async(categories=None, test_id=None):
         test_runs[test_id] = test_run
 
     print(f"✓ Test run {test_id} completed: {passed}/{total} passed")
+
+
+def generate_html_report(test_run_dict, sys_info_dict=None):
+    """
+    Build a self-contained HTML test report from a TestRun dict.
+    Uses only stdlib — no external template engine required.
+    """
+    import html as _html
+
+    def _e(s):
+        """HTML-escape a value."""
+        return _html.escape(str(s)) if s is not None else ''
+
+    td       = test_run_dict
+    summary  = td.get('summary', {})
+    results  = td.get('results', [])
+    test_id  = td.get('test_id', 'unknown')
+    started  = td.get('started', '')
+    completed = td.get('completed', '')
+
+    total    = summary.get('total',    0)
+    passed   = summary.get('passed',   0)
+    failed   = summary.get('failed',   0)
+    warnings = summary.get('warnings', 0)
+    skipped  = summary.get('skipped',  0)
+
+    # Overall verdict
+    if failed > 0:
+        verdict, verdict_color = 'FAILED',                '#ff3d3d'
+    elif warnings > 0:
+        verdict, verdict_color = 'PASSED WITH WARNINGS',  '#ff9500'
+    else:
+        verdict, verdict_color = 'PASSED',                '#00c853'
+
+    # Duration
+    duration_str = 'N/A'
+    if started and completed:
+        try:
+            from datetime import datetime as _dt2
+            s_dt = _dt2.fromisoformat(started.rstrip('Z'))
+            e_dt = _dt2.fromisoformat(completed.rstrip('Z'))
+            secs = (e_dt - s_dt).total_seconds()
+            duration_str = f'{secs:.1f}s'
+        except Exception:
+            pass
+
+    _icons  = {
+        'passed':  '\u2713',
+        'failed':  '\u2717',
+        'warning': '\u26a0',
+        'skipped': '\u25cb',
+        'running': '\u27f3',
+    }
+    _colors = {
+        'passed':  '#00c853',
+        'failed':  '#ff3d3d',
+        'warning': '#ff9500',
+        'skipped': '#4488cc',
+        'running': '#00b8d4',
+    }
+
+    # ------------------------------------------------------------------ #
+    # Results table rows
+    # ------------------------------------------------------------------ #
+    rows = []
+    for r in results:
+        status   = r.get('status', 'unknown')
+        icon     = _icons.get(status, '?')
+        color    = _colors.get(status, '#c8d8e8')
+        raw_name = r.get('name', '')
+        if raw_name.startswith('Sim'):
+            raw_name = raw_name[3:]
+        category = r.get('category', '')
+        message  = r.get('message', '')
+        duration = r.get('duration', 0)
+
+        rows.append(
+            '<tr>'
+            '<td><span style="color:' + color + ';font-weight:600">'
+            + icon + ' ' + _e(status) + '</span></td>'
+            '<td><span class="cat-badge">' + _e(category) + '</span></td>'
+            '<td>' + _e(raw_name) + '</td>'
+            '<td>' + _e(message) + '</td>'
+            '<td style="text-align:right;font-family:monospace;color:#4e6070">'
+            + f'{duration:.2f}s' + '</td>'
+            '</tr>'
+        )
+
+        details  = r.get('details') or {}
+        solution = details.get('solution', '')
+        if solution and status in ('failed', 'warning', 'skipped'):
+            border_c = '#ff3d3d' if status == 'failed' else '#ff9500'
+            rows.append(
+                '<tr><td colspan="5" style="padding:0 12px 12px 44px">'
+                '<div style="background:#1a2232;border-radius:6px;padding:10px 14px;'
+                'border-left:3px solid ' + border_c + ';white-space:pre-wrap;'
+                'color:#4e6070;font-size:12px;line-height:1.6">'
+                '<div style="font-weight:600;color:#c8d8e8;margin-bottom:4px">'
+                '\U0001f6e0 How to fix:</div>'
+                + _e(solution) +
+                '</div></td></tr>'
+            )
+
+    all_rows = '\n'.join(rows)
+
+    # ------------------------------------------------------------------ #
+    # Issues detail section (failed / warning / skipped with extra data)
+    # ------------------------------------------------------------------ #
+    issues = [
+        r for r in results
+        if r.get('status') in ('failed', 'warning', 'skipped')
+        and (
+            (r.get('details') or {}).get('solution')
+            or (r.get('details') or {}).get('source_location')
+            or (r.get('details') or {}).get('traceback')
+        )
+    ]
+
+    issue_cards = []
+    for r in issues:
+        status   = r.get('status', '')
+        color    = _colors.get(status, '#c8d8e8')
+        icon     = _icons.get(status, '?')
+        raw_name = r.get('name', '')
+        if raw_name.startswith('Sim'):
+            raw_name = raw_name[3:]
+        details    = r.get('details') or {}
+        source_loc = details.get('source_location', '')
+        solution   = details.get('solution', '')
+        tb_text    = details.get('traceback', '')
+
+        card = [
+            '<div style="background:#131821;border-radius:8px;padding:16px;'
+            'margin-bottom:16px;border-left:3px solid ' + color + '">',
+            '<div style="font-size:15px;font-weight:600;color:' + color
+            + ';margin-bottom:8px">' + icon + ' ' + _e(raw_name) + '</div>',
+            '<div style="color:#4e6070;font-size:13px;margin-bottom:8px">'
+            + _e(r.get('message', '')) + '</div>',
+        ]
+
+        if source_loc:
+            card.append(
+                '<div style="font-size:12px;color:#4e6070;margin-bottom:8px">'
+                '<b style="color:#c8d8e8">Source:</b> '
+                '<code style="color:#1a8cff">' + _e(source_loc) + '</code></div>'
+            )
+
+        if solution:
+            border_c = '#ff3d3d' if status == 'failed' else '#ff9500'
+            card.append(
+                '<div style="background:#1a2232;border-radius:6px;padding:10px 14px;'
+                'border-left:3px solid ' + border_c + ';white-space:pre-wrap;'
+                'color:#4e6070;font-size:12px;margin-bottom:8px">'
+                '<b style="color:#c8d8e8">How to fix:</b>\n'
+                + _e(solution) + '</div>'
+            )
+
+        if tb_text:
+            card.append(
+                '<details><summary style="cursor:pointer;color:#4e6070;font-size:12px">'
+                '\u25b6 Full Traceback</summary>'
+                '<pre style="background:#0c0f14;padding:12px;border-radius:6px;'
+                'font-size:11px;overflow-x:auto;white-space:pre-wrap;'
+                'color:#ff6b6b;margin-top:8px">'
+                + _e(tb_text) + '</pre></details>'
+            )
+
+        card.append('</div>')
+        issue_cards.append(''.join(card))
+
+    issues_html = ''
+    if issue_cards:
+        issues_html = (
+            '<h2 style="margin:32px 0 16px;font-size:16px;letter-spacing:1px;'
+            'text-transform:uppercase;color:#c8d8e8;'
+            'border-bottom:1px solid #1e2d40;padding-bottom:8px">Issues Detail</h2>'
+            + ''.join(issue_cards)
+        )
+
+    # ------------------------------------------------------------------ #
+    # System info table
+    # ------------------------------------------------------------------ #
+    si = sys_info_dict or {}
+    sys_section = ''
+    if si:
+        si_rows = [
+            ('Hostname',  si.get('hostname',       '?')),
+            ('OS',        si.get('os_version',     '?')),
+            ('Kernel',    si.get('kernel_version', '?')),
+            ('CPU Cores', si.get('cpu_count',      '?')),
+            ('RAM',       f"{si.get('total_ram_gb',  0):.2f} GB"),
+            ('Disk',      f"{si.get('total_disk_gb', 0):.2f} GB"),
+        ]
+        si_html = ''.join(
+            '<tr><td style="color:#4e6070;width:120px">' + _e(lbl) + '</td>'
+            '<td><b>' + _e(val) + '</b></td></tr>'
+            for lbl, val in si_rows
+        )
+        sys_section = (
+            '<h2 style="margin-bottom:16px;font-size:16px;letter-spacing:1px;'
+            'text-transform:uppercase;color:#c8d8e8;'
+            'border-bottom:1px solid #1e2d40;padding-bottom:8px">'
+            'System Information</h2>'
+            '<table style="margin-bottom:32px">' + si_html + '</table>'
+        )
+
+    # ------------------------------------------------------------------ #
+    # Summary stat cards
+    # ------------------------------------------------------------------ #
+    def _stat_card(count, label, color):
+        return (
+            '<div style="background:#131821;border-radius:8px;padding:16px;'
+            'border-left:3px solid ' + color + ';text-align:center">'
+            '<div style="font-size:28px;font-weight:700;color:' + color + '">'
+            + str(count) +
+            '</div><div style="font-size:12px;color:#4e6070;'
+            'text-transform:uppercase;margin-top:4px">' + label + '</div>'
+            '</div>'
+        )
+
+    stat_cards = (
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);'
+        'gap:12px;margin-bottom:32px">'
+        + _stat_card(passed,   'Passed',   '#00c853')
+        + _stat_card(failed,   'Failed',   '#ff3d3d')
+        + _stat_card(warnings, 'Warnings', '#ff9500')
+        + _stat_card(skipped,  'Skipped',  '#4488cc')
+        + '</div>'
+    )
+
+    generated_at = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    # ------------------------------------------------------------------ #
+    # Assemble full document
+    # ------------------------------------------------------------------ #
+    doc = (
+        '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+        '<meta charset="UTF-8">\n'
+        '<title>BIT Test Report \u2014 ' + _e(test_id) + '</title>\n'
+        '<style>\n'
+        '  * { margin:0; padding:0; box-sizing:border-box; }\n'
+        '  body { font-family: \'Segoe UI\', system-ui, sans-serif;'
+        ' background:#0c0f14; color:#c8d8e8;'
+        ' padding:32px; max-width:1100px; margin:0 auto; }\n'
+        '  h1 { font-size:22px; font-weight:700; letter-spacing:1px;'
+        ' text-transform:uppercase; }\n'
+        '  table { width:100%; border-collapse:collapse; font-size:13px; }\n'
+        '  th { text-align:left; padding:10px 12px; background:#131821;'
+        ' color:#4e6070; font-size:12px; text-transform:uppercase;'
+        ' letter-spacing:0.5px; border-bottom:1px solid #1e2d40; }\n'
+        '  td { padding:10px 12px; border-bottom:1px solid #1e2d40;'
+        ' vertical-align:top; }\n'
+        '  .cat-badge { display:inline-block; padding:2px 8px;'
+        ' border-radius:4px; background:#1a2232;'
+        ' font-size:11px; color:#4e6070; }\n'
+        '  @media print { body { background:white; color:black;'
+        ' padding:16px; } }\n'
+        '</style>\n</head>\n<body>\n'
+
+        # Page header
+        '<div style="display:flex;justify-content:space-between;'
+        'align-items:flex-start;margin-bottom:24px;padding-bottom:16px;'
+        'border-bottom:2px solid #1a8cff">\n'
+        '  <div>\n'
+        '    <div style="color:#4e6070;font-size:12px;letter-spacing:1px;'
+        'text-transform:uppercase;margin-bottom:6px">Automated Test Report</div>\n'
+        '    <h1><span style="color:#1a8cff">Product Test</span> BIT</h1>\n'
+        '  </div>\n'
+        '  <div style="text-align:right;font-size:12px;color:#4e6070">\n'
+        '    <div>Test ID: <b style="color:#c8d8e8">' + _e(test_id) + '</b></div>\n'
+        '    <div>Started: <b style="color:#c8d8e8">' + _e(started) + '</b></div>\n'
+        '    <div>Duration: <b style="color:#c8d8e8">' + _e(duration_str) + '</b></div>\n'
+        '    <div>Generated: <b style="color:#c8d8e8">' + _e(generated_at) + '</b></div>\n'
+        '  </div>\n</div>\n'
+
+        # Verdict banner
+        '<div style="background:' + verdict_color + '22;border:1px solid '
+        + verdict_color + ';border-radius:8px;padding:16px 24px;'
+        'margin-bottom:24px;text-align:center">\n'
+        '  <div style="font-size:24px;font-weight:700;color:' + verdict_color
+        + ';letter-spacing:2px">' + verdict + '</div>\n'
+        '  <div style="color:#4e6070;font-size:13px;margin-top:4px">'
+        + str(passed) + '/' + str(total) + ' checks passed</div>\n'
+        '</div>\n'
+
+        # Summary cards
+        + stat_cards
+
+        # System info
+        + sys_section
+
+        # Results table
+        + '<h2 style="margin-bottom:16px;font-size:16px;letter-spacing:1px;'
+        'text-transform:uppercase;color:#c8d8e8;'
+        'border-bottom:1px solid #1e2d40;padding-bottom:8px">Test Results</h2>\n'
+        '<table style="margin-bottom:32px">\n'
+        '<thead><tr>'
+        '<th style="width:100px">Status</th>'
+        '<th style="width:110px">Category</th>'
+        '<th>Check</th>'
+        '<th>Message</th>'
+        '<th style="width:70px;text-align:right">Duration</th>'
+        '</tr></thead>\n'
+        '<tbody>\n' + all_rows + '\n</tbody>\n</table>\n'
+
+        # Issues detail
+        + issues_html
+
+        # Footer
+        + '<div style="margin-top:32px;padding-top:16px;'
+        'border-top:1px solid #1e2d40;font-size:12px;color:#4e6070;text-align:center">'
+        'Generated by Product Test BIT &nbsp;|&nbsp; ' + _e(generated_at)
+        + '</div>\n'
+        '</body>\n</html>'
+    )
+
+    return doc
+
+
+@app.route('/api/report', methods=['GET'])
+@app.route('/api/report/<test_id>', methods=['GET'])
+def get_report(test_id=None):
+    """Generate and download a self-contained HTML test report."""
+    import platform
+    import psutil
+    global current_test_id
+
+    if test_id is None:
+        test_id = current_test_id
+
+    if not test_id or test_id not in test_runs:
+        return jsonify({"error": "No test results available"}), 404
+
+    try:
+        sys_info = {
+            "hostname":       platform.node(),
+            "os_version":     platform.system() + " " + platform.release(),
+            "kernel_version": platform.version(),
+            "cpu_count":      psutil.cpu_count(),
+            "total_ram_gb":   round(psutil.virtual_memory().total / (1024 ** 3), 2),
+            "total_disk_gb":  round(psutil.disk_usage('/').total  / (1024 ** 3), 2),
+        }
+    except Exception:
+        sys_info = {}
+
+    html_content = generate_html_report(test_runs[test_id].to_dict(), sys_info)
+    filename = f"bit_report_{test_id}.html"
+
+    return Response(
+        html_content,
+        mimetype='text/html',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
 
 
 @app.route('/')
@@ -322,6 +701,9 @@ if __name__ == '__main__':
                         help='Run in simulation mode (no hardware required)')
     parser.add_argument('--config', type=str, default=None,
                         help='Path to config file (default: config.json, or config_local.json with --sim)')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable developer/debug mode: logs source file:line for every '
+                             'error and warning and includes full tracebacks in API results')
     server_args = parser.parse_args()
 
     # Determine config file
@@ -339,6 +721,11 @@ if __name__ == '__main__':
         print(" Product Test BIT Server".center(60))
     print("=" * 60)
     print()
+    if server_args.debug:
+        print("\u26a0  Developer/Debug mode ON")
+        print("   - Source file:line logged for every error and warning")
+        print("   - Full tracebacks included in API results")
+        print()
 
     # Load configuration
     if config_file:
@@ -356,6 +743,13 @@ if __name__ == '__main__':
     else:
         if not load_config():
             sys.exit(1)
+
+    # Resolve developer/debug mode (CLI flag takes priority over config file)
+    debug_mode = server_args.debug or config.get('developer', {}).get('debug', False)
+    if 'developer' not in config:
+        config['developer'] = {}
+    config['developer']['debug'] = debug_mode
+    setup_debug_logging(debug_mode)
 
     # Swap to simulated checks if --sim
     if server_args.sim:

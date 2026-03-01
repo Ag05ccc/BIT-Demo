@@ -1,265 +1,236 @@
 # Client Usage Guide
 
-The client runs on the Test PC and provides a terminal UI to interact with the Jetson server. For a browser-based interface, use the [Web GUI](#web-gui-alternative) instead.
+The **CLI client** (`client/test_client.py`) runs on your Test PC and communicates with the BIT server over HTTP. It uses Python stdlib only — no external dependencies.
+
+For a browser-based interface, use the **Web GUI** at `http://<jetson-ip>:5500` or the **Launcher** (`launcher.py`).
+
+---
 
 ## Installation
 
-### 1. Install Dependencies
+No packages to install. The client uses Python stdlib only.
+
+Configure the Jetson IP and port:
 
 ```bash
-cd client
-pip install -r requirements.txt
+nano client/client_config.json
 ```
-
-### 2. Configure
-
-Edit `client/client_config.json`:
 
 ```json
 {
   "jetson": {
     "ip": "192.168.1.2",
-    "port": 5000,
+    "port": 5500,
     "timeout": 60
-  },
-  "display": {
-    "show_details": true,
-    "auto_refresh": true,
-    "refresh_interval": 1.0
-  },
-  "export": {
-    "results_dir": "test_results",
-    "format": "json",
-    "include_timestamp": true
   }
 }
 ```
 
-For local development (server running on same machine):
+For local testing (server running on the same machine):
 
 ```bash
-python test_client.py --config client_config_local.json run
+python3 client/test_client.py --config client/client_config_local.json run
 ```
+
+---
 
 ## Commands
 
-### Run All Tests
+### `run` — Run tests
 
 ```bash
-python test_client.py run
+python3 client/test_client.py run              # all categories
+python3 client/test_client.py run autopilot    # one category
+python3 client/test_client.py run ros
+python3 client/test_client.py run network
 ```
 
-This will:
-1. Connect to the Jetson server
-2. Start all test checks
-3. Display live progress with rich UI
-4. Show final summary with solution hints for any failures
-
-Example output:
+Results stream live to the terminal as each check completes:
 
 ```
 ============================================================
               Product Test BIT Client
 ============================================================
 
-Connecting to server at http://192.168.1.2:5000... ✓ Connected
+Connecting to server at http://192.168.1.2:5500... ✓ Connected
 
 Starting test run...
-✓ Test started (ID: 20260215_143052)
+✓ Test started (ID: 20260301_143025)
 
-┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┓
-┃ Status ┃ Category   ┃ Check        ┃ Message      ┃ Duration ┃
-┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
-│ ✓ pass │ jetson     │ JetsonBoot   │ No errors    │   0.52s  │
-│ ✓ pass │ jetson     │ Resources    │ Resources OK │   1.03s  │
-│ ✗ fail │ autopilot  │ Detect       │ No heartbeat │   10.1s  │
-└────────┴────────────┴──────────────┴──────────────┴──────────┘
+Status         Category      Check                           Message                                            Duration
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+✓ passed       jetson        JetsonBootCheck                 No boot errors found                                  0.52s
+✓ passed       jetson        JetsonResourcesCheck            CPU 12%, RAM 34%, Disk 48GB free                      1.03s
+⚠ warning      jetson        JetsonTemperatureCheck          CPU temp 72°C (warning threshold)                     0.31s
+✗ failed       autopilot     AutopilotDetectCheck            No MAVROS state on /mavros/state within 10s          10.14s
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-╭───────────── Suggested Solutions ─────────────╮
-│ AutopilotDetectCheck (failed):                │
-│   1. Check the autopilot cable connection     │
-│   2. Verify power to the autopilot board      │
-│   3. Check baud rate in config.json           │
-╰───────────────────────────────────────────────╯
+──────────────────── Suggested Solutions ──────────────────────
+⚠ JetsonTemperatureCheck - CPU temp 72°C
+  How to fix:
+    Check cooling fan is running
+    Clear ventilation around Jetson
 
-╭───────────── TEST FAILED ──────────────╮
-│ ✓ Passed:   32/35                      │
-│ ✗ Failed:   2/35                       │
-│ ⚠ Warnings: 1/35                       │
-│ ○ Skipped:  0/35                       │
-╰────────────────────────────────────────╯
+✗ AutopilotDetectCheck - No MAVROS state on /mavros/state within 10s
+  How to fix:
+    Verify MAVROS is running: rosnode list | grep mavros
+    Check autopilot cable and power
+────────────────────────────────────────────────────────────────
+
+──────────────────── TEST FAILED ────────────────────
+  ✓ Passed:   18/21
+  ✗ Failed:    1/21
+  ⚠ Warnings:  1/21
+  ○ Skipped:   1/21
+──────────────────────────────────────────────────────
 ```
 
-### Run Specific Category
+Available categories: `jetson`, `device`, `network`, `ros`, `autopilot`, `system`
+
+---
+
+### `status` — Server status
 
 ```bash
-python test_client.py run autopilot
-python test_client.py run ros
-python test_client.py run network
+python3 client/test_client.py status
 ```
 
-Available categories:
-- `jetson` - Jetson health checks (boot, resources, temperature)
-- `device` - Device checks (udev, existence, permissions, handshake)
-- `network` - Network checks (interfaces, ping, Test PC connectivity)
-- `ros` - ROS checks (master, nodes, topics, rates, freshness, rosbag)
-- `autopilot` - Autopilot checks (heartbeat, status, params, sensors)
-- `system` - System checks (services, env vars, time, scripts, metadata)
+Shows hostname, OS, CPU, RAM, and disk of the Jetson.
 
-### Check Server Status
+---
+
+### `results` — Latest results
 
 ```bash
-python test_client.py status
+python3 client/test_client.py results
 ```
 
-Shows:
-- Server status (online/offline)
-- Hostname
-- Platform info
-- CPU cores
-- RAM and disk space
+Displays the most recent test run without triggering a new one.
 
-### View Latest Results
+---
+
+### `report` — Download HTML report
 
 ```bash
-python test_client.py results
+python3 client/test_client.py report
 ```
 
-Displays the most recent test run results with solution hints.
+Downloads a self-contained HTML report for the latest test run and saves it locally as `bit_report_<test_id>.html`. The report includes the full results table, solutions, source locations (debug mode), and tracebacks.
 
-### Export Autopilot Parameters
+---
+
+### `export-params` / `compare-params`
 
 ```bash
-python test_client.py export-params
+python3 client/test_client.py export-params    # export autopilot params
+python3 client/test_client.py compare-params   # compare with defaults
 ```
 
-Exports current autopilot parameters with timestamp.
+---
 
-### Compare Autopilot Parameters
+### Custom config path
 
 ```bash
-python test_client.py compare-params
+python3 client/test_client.py --config /path/to/my_config.json run
 ```
 
-Compares current parameters against default.param file.
+---
 
-### Using a Custom Config
+## Launcher (Web-based entry point)
+
+For a graphical entry point that starts the server on the Jetson via SSH:
 
 ```bash
-python test_client.py --config /path/to/my_config.json run
-python test_client.py --config client_config_local.json status
+# On your PC (one-time SSH key setup):
+ssh-copy-id ubuntu@192.168.1.2
+
+# Start launcher:
+python3 launcher.py    # opens http://localhost:8080
 ```
 
-## Solution Hints
+Click **CONNECT** → the launcher SSHes into the Jetson, starts `test_server.py`, and opens the BIT dashboard automatically.
 
-When checks fail or produce warnings, the client automatically displays suggested solutions. These are actionable fix steps specific to each check and status. For example:
+---
 
-- **AutopilotDetectCheck (failed)**: "Check the autopilot cable and power, verify baud rate..."
-- **DevicePermissionsCheck (failed)**: "Add user to dialout group, check udev rules..."
-- **ROSMasterCheck (failed)**: "Start roscore, check ROS_MASTER_URI..."
+## Testing locally (no Jetson)
 
-## Web GUI Alternative
+Two terminals:
 
-Instead of the CLI client, you can use the browser-based Web GUI:
+**Terminal 1 — start sim server:**
+```bash
+python3 run_local.py
+# Server running at http://localhost:5500
+```
 
-1. Start the server: `python3 server/test_server.py`
-2. Open `http://<jetson-ip>:5000` in a browser
-3. Click "Run All Tests" or select a category
-4. View live results, solution hints, and export JSON
+**Terminal 2 — run CLI:**
+```bash
+python3 client/test_client.py --config client/client_config_local.json run
+```
 
-The Web GUI provides the same functionality as the CLI client with a visual interface.
+Or just open `http://localhost:5500` in your browser.
+
+---
 
 ## Exit Codes
 
-- `0` - All tests passed
-- `1` - One or more tests failed or error occurred
+| Code | Meaning |
+|------|---------|
+| `0` | All checks passed |
+| `1` | One or more checks failed, or connection error |
 
-This allows integration with CI/CD:
-
+CI/CD example:
 ```bash
-python test_client.py run
-if [ $? -eq 0 ]; then
-    echo "Tests passed!"
-else
-    echo "Tests failed!"
-    exit 1
-fi
+python3 client/test_client.py run
+if [ $? -eq 0 ]; then echo "PASS"; else echo "FAIL"; exit 1; fi
 ```
+
+---
+
+## Scripting with the API client
+
+```python
+import sys, os
+sys.path.insert(0, 'path/to/BIT-Demo')
+from client.utils.api_client import APIClient
+import time
+
+client = APIClient('http://192.168.1.2:5500')
+
+# Start tests
+resp    = client.run_tests()          # or run_tests(category='ros')
+test_id = resp['test_id']
+
+# Poll until complete
+while True:
+    results = client.get_results(test_id)
+    if results['status'] == 'completed':
+        break
+    time.sleep(1)
+
+# Check outcome
+summary = results['summary']
+print(f"Passed: {summary['passed']}/{summary['total']}")
+
+for r in results['results']:
+    if r['status'] == 'failed':
+        print(f"FAIL: {r['name']} — {r['message']}")
+        sol = (r.get('details') or {}).get('solution', '')
+        if sol:
+            print(f"  Fix: {sol}")
+
+# Download report
+report_bytes = client.get_report(test_id)
+with open(f"report_{test_id}.html", 'wb') as f:
+    f.write(report_bytes)
+```
+
+---
 
 ## Troubleshooting
 
-### Cannot connect to server
-
-Check:
-1. Server is running on Jetson (`python3 test_server.py`)
-2. Network connection is active (`ping 192.168.1.2`)
-3. IP in `client_config.json` is correct
-4. Firewall allows port 5000
-
-### Slow response
-
-- Increase `timeout` in `client_config.json`
-- Check network latency
-- Some checks (e.g., ROS topic rates) take time to measure
-
-### Test results not updating
-
-- Server may be busy with another test (only one test can run at a time)
-- Check server logs on Jetson
-- Restart server if needed
-
-## Advanced Usage
-
-### Scripting
-
-```python
-from utils.api_client import APIClient
-
-client = APIClient("http://192.168.1.2:5000")
-
-# Run tests
-response = client.run_tests()
-test_id = response['test_id']
-
-# Wait and get results
-import time
-time.sleep(30)
-results = client.get_results(test_id)
-
-# Check status
-if results['summary']['failed'] == 0:
-    print("All tests passed!")
-else:
-    # Print failures
-    for r in results['results']:
-        if r['status'] == 'failed':
-            print(f"FAIL: {r['name']} - {r['message']}")
-            if 'solution' in r.get('details', {}):
-                print(f"  Fix: {r['details']['solution']}")
-```
-
-### Custom Reporting
-
-Results are available as JSON via the API, allowing custom reporting tools:
-
-```bash
-curl http://192.168.1.2:5000/api/test/results | python -m json.tool
-```
-
-## Configuration Options
-
-### Display Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `show_details` | `true` | Show detailed error messages |
-| `auto_refresh` | `true` | Auto-refresh during test run |
-| `refresh_interval` | `1.0` | Refresh rate in seconds |
-
-### Export Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `results_dir` | `"test_results"` | Directory for exported results |
-| `format` | `"json"` | Export format |
-| `include_timestamp` | `true` | Add timestamp to filenames |
+| Problem | Fix |
+|---------|-----|
+| Cannot connect to server | Verify server is running on Jetson; check IP in `client_config.json`; ping device |
+| Port refused | Default port is **5500** — make sure config matches |
+| Slow response | Increase `timeout` in config; some checks (ROS rate measurement) take several seconds |
+| Results not updating | Only one test can run at a time; wait for the current run to finish |

@@ -24,14 +24,14 @@ CLIENT_DIR = os.path.join(PROJECT_ROOT, 'client')
 CLIENT_CONFIG = os.path.join(CLIENT_DIR, 'client_config_local.json')
 
 
-def start_sim_server():
+def start_sim_server(debug_mode=False):
     """Start the server in simulation mode in a background thread."""
     # Add paths for imports
     sys.path.insert(0, PROJECT_ROOT)
     sys.path.insert(0, SERVER_DIR)
 
     import json
-    from server.test_server import app, CHECK_CLASSES
+    from server.test_server import app, CHECK_CLASSES, setup_debug_logging
     from server.checks.sim_checks import SIM_CHECK_CLASSES
 
     # Load local config
@@ -39,9 +39,17 @@ def start_sim_server():
     with open(config_path, 'r') as f:
         config = json.load(f)
 
+    # Inject developer/debug mode into config so checks can read it
+    if 'developer' not in config:
+        config['developer'] = {}
+    config['developer']['debug'] = debug_mode
+
     # Inject config into server module
     import server.test_server as server_module
     server_module.config = config
+
+    # Configure logging before any checks run
+    setup_debug_logging(debug_mode)
 
     # Swap to simulated checks
     CHECK_CLASSES.clear()
@@ -54,6 +62,11 @@ def start_sim_server():
     print(" Product Test BIT - Local Simulation".center(60))
     print("=" * 60)
     print()
+    if debug_mode:
+        print("\u26a0  Developer/Debug mode ON")
+        print("   - Source file:line logged for every error and warning")
+        print("   - Full tracebacks included in API results")
+        print()
     print(f"\u2713 Simulation mode active")
     print(f"\u2713 Server starting on http://{host}:{port}")
     print(f"\u2713 No hardware required")
@@ -115,11 +128,14 @@ Examples:
                         help='Show server status')
     parser.add_argument('--results', action='store_true',
                         help='Show latest test results')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable developer/debug mode: logs source file:line for every '
+                             'error/warning and includes full tracebacks in results')
 
     args = parser.parse_args()
 
-    # Start the sim server
-    host, port = start_sim_server()
+    # Start the sim server (pass debug flag so checks receive it via config)
+    host, port = start_sim_server(debug_mode=args.debug)
 
     # If no client command specified, just keep server running
     if not args.run and not args.status and not args.results:

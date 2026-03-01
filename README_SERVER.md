@@ -1,84 +1,58 @@
 # Server Setup Guide
 
-The server runs on the Jetson device and provides REST API endpoints for test execution, plus a browser-based Web GUI.
+The server (`test_server.py`) runs on the Jetson (or any Linux test device). It provides a Flask REST API and serves the browser-based Web GUI.
+
+---
 
 ## Installation
 
-### 1. Copy Server Files to Jetson
+### 1. Copy project to the Jetson
 
 ```bash
-# From your development machine
-scp -r product_test_bit/server nvidia@192.168.1.2:/home/nvidia/test_server
-scp -r product_test_bit/common nvidia@192.168.1.2:/home/nvidia/test_server/
+# From your PC:
+scp -r BIT-Demo  ubuntu@192.168.1.2:~/BIT-Demo
+
+# Faster on subsequent updates:
+rsync -av BIT-Demo/  ubuntu@192.168.1.2:~/BIT-Demo/
 ```
 
-### 2. SSH into Jetson
+### 2. SSH in and install dependencies
 
 ```bash
-ssh nvidia@192.168.1.2
-cd /home/nvidia/test_server
+ssh ubuntu@192.168.1.2
+cd ~/BIT-Demo/server
+pip3 install flask psutil pyserial
 ```
 
-### 3. Install Dependencies
+### 3. Edit config
 
 ```bash
-# Install Python dependencies
-pip3 install -r server/requirements.txt
-
-# For ROS checks (if using ROS)
-# sudo apt-get install ros-noetic-desktop-full
-# source /opt/ros/noetic/setup.bash
+nano server/config.json   # set device paths, IPs, thresholds
 ```
 
-### 4. Configure
+See [Configuration Reference](#configuration-reference) below.
 
-Edit `server/config.json` to match your system. This is the **only file** you need to change for deployment -- all device paths, IPs, thresholds, and timeouts are controlled here.
+---
+
+## Starting the Server
+
+### Production (real hardware)
 
 ```bash
-nano server/config.json
+cd ~/BIT-Demo/server
+python3 test_server.py
 ```
 
-See [Configuration Reference](#configuration-reference) below for all available options.
-
-### 5. Make Scripts Executable (Optional)
-
-Shell scripts are **optional** -- they are only needed if you configure them in `config.json` under the `scripts` section. If you don't use them, the related checks will simply skip.
-
-```bash
-chmod +x server/scripts/*.sh
-```
-
-### 6. Customize Template Scripts (Optional)
-
-Edit the template scripts for your system if you want the server to run startup or logging scripts:
-
-```bash
-nano server/scripts/start_system.sh
-nano server/scripts/log_test.sh
-```
-
-## Running the Server
-
-### Production Mode
-
-```bash
-cd /home/nvidia/test_server
-python3 server/test_server.py
-```
-
-You should see:
-
+Expected output:
 ```
 ============================================================
              Product Test BIT Server
 ============================================================
 
-✓ Configuration loaded from server/config.json
+✓ Configuration loaded from config.json
 
-Starting server on 0.0.0.0:5000...
-Debug mode: False
-
-Web GUI:  http://192.168.1.2:5000
+Starting server on 0.0.0.0:5500...
+Web GUI:  http://127.0.0.1:5500
 
 API endpoints:
   GET  /api/status
@@ -90,33 +64,48 @@ Server is ready. Press Ctrl+C to stop.
 ============================================================
 ```
 
-### Simulation Mode (No Hardware)
+Open `http://<jetson-ip>:5500` in any browser.
+
+### Simulation mode (no hardware)
 
 ```bash
-python3 server/test_server.py --sim
+python3 test_server.py --sim
 ```
 
-This uses `config_local.json` and replaces all real checks with simulated versions. No hardware, sensors, or ROS required. Useful for:
+Uses `config_local.json` and replaces all real checks with simulated versions. No hardware, sensors, or ROS required. Good for development, demos, and CI/CD.
 
-- Development and testing
-- Demos and presentations
-- CI/CD pipelines
-
-### Custom Config File
+### Developer / debug mode
 
 ```bash
-python3 server/test_server.py --config /path/to/my_config.json
+python3 test_server.py --debug          # production + debug
+python3 test_server.py --sim --debug    # sim + debug
 ```
 
-### Auto-Start with systemd (Optional)
+Debug mode attaches the **source file and line number** of every error or warning to the check result, and includes full Python tracebacks in the API response. Both the Web GUI and CLI client display this extra information automatically.
 
-Create a systemd service file:
+### Custom config file
 
 ```bash
-sudo nano /etc/systemd/system/test-server.service
+python3 test_server.py --config /path/to/my_config.json
 ```
 
-Add:
+### Keep running after SSH disconnect
+
+```bash
+# Option A — nohup (simple)
+nohup python3 test_server.py > server.log 2>&1 &
+
+# Option B — screen (re-attachable)
+screen -S bit
+python3 test_server.py
+# Detach: Ctrl+A, D   |   Re-attach: screen -r bit
+```
+
+### Auto-start with systemd (optional)
+
+```bash
+sudo nano /etc/systemd/system/bit-server.service
+```
 
 ```ini
 [Unit]
@@ -125,247 +114,239 @@ After=network.target
 
 [Service]
 Type=simple
-User=nvidia
-WorkingDirectory=/home/nvidia/test_server
-ExecStart=/usr/bin/python3 /home/nvidia/test_server/server/test_server.py
+User=ubuntu
+WorkingDirectory=/home/ubuntu/BIT-Demo/server
+ExecStart=/usr/bin/python3 /home/ubuntu/BIT-Demo/server/test_server.py
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Enable and start:
-
 ```bash
-sudo systemctl enable test-server
-sudo systemctl start test-server
-sudo systemctl status test-server
+sudo systemctl enable bit-server
+sudo systemctl start  bit-server
+sudo systemctl status bit-server
 ```
+
+---
 
 ## Web GUI
 
-Open `http://<jetson-ip>:5000` in any browser on the network.
+Open `http://<jetson-ip>:5500` in any browser on the same network.
 
-Features:
-- Dark theme dashboard with server status indicator
-- "Run All Tests" button + per-category buttons
-- Live progress bar with colored counters (passed/failed/warnings/skipped)
-- Results table with status icons, check names, messages, and durations
-- Solution hints shown inline for failed/warning checks
-- Click any row to see full details JSON
-- Export results as JSON file
+### Features
+- **Aerospace avionics theme** — dark cockpit background, electric-blue accent
+- **Server status indicator** — live dot in header (green = online)
+- **System info bar** — hostname, OS, CPU, RAM, disk
+- **RUN ALL TESTS** button + per-category buttons (Jetson, Device, Network, ROS, Autopilot, System)
+- **Live streaming** — result rows appear as each check completes
+- **Progress bar** — colour-segmented (green / amber / red)
+- **Inline solutions** — "How to fix" guidance shown below failed/warning rows
+- **Details panel** — click any row for full information (message, solution, source location, traceback)
+- **Export JSON** — downloads raw results as `.json`
+- **Export Report** — downloads a self-contained, printable HTML report with full results, solutions, and (if debug mode) tracebacks
+
+---
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET`  | `/api/status` | Server health check |
-| `GET`  | `/api/system/info` | System information (hostname, CPU, RAM, disk) |
-| `GET`  | `/api/config` | Current configuration (secrets excluded) |
-| `POST` | `/api/test/run` | Run all tests |
-| `POST` | `/api/test/run/<category>` | Run tests for a specific category |
-| `GET`  | `/api/test/results` | Get latest test results |
-| `GET`  | `/api/test/results/<test_id>` | Get results for a specific test run |
+| `GET`  | `/api/status` | Server health + version |
+| `GET`  | `/api/system/info` | Hostname, OS, CPU, RAM, disk |
+| `GET`  | `/api/config` | Current config (secrets excluded) |
+| `POST` | `/api/test/run` | Start all tests (async) |
+| `POST` | `/api/test/run/<category>` | Start one category |
+| `GET`  | `/api/test/results` | Latest test results |
+| `GET`  | `/api/test/results/<test_id>` | Results for a specific run |
+| `GET`  | `/api/report` | Download HTML report (latest run) |
+| `GET`  | `/api/report/<test_id>` | Download HTML report (specific run) |
 | `POST` | `/api/autopilot/params/export` | Export autopilot parameters |
-| `POST` | `/api/autopilot/params/compare` | Compare parameters with defaults |
-| `POST` | `/api/scripts/start` | Run start_system.sh |
-| `POST` | `/api/scripts/log_test` | Run log_test.sh |
+| `POST` | `/api/autopilot/params/compare` | Compare params with defaults |
+| `POST` | `/api/scripts/start` | Run `start_system.sh` |
+| `POST` | `/api/scripts/log_test` | Run `log_test.sh` |
 
-## Testing the Server
+### Quick curl tests
 
 ```bash
-# From Jetson or another machine on the network
-curl http://localhost:5000/api/status
-curl http://localhost:5000/api/system/info
-curl -X POST http://localhost:5000/api/test/run
-sleep 5
-curl http://localhost:5000/api/test/results
+curl http://localhost:5500/api/status
+curl http://localhost:5500/api/system/info
+curl -X POST http://localhost:5500/api/test/run
+sleep 10
+curl http://localhost:5500/api/test/results
 ```
 
-## Solution Hints
+---
 
-Every check has built-in solution hints for `failed`, `warning`, and `skipped` states. When a check fails, the result includes a `solution` field with actionable fix steps. These are displayed in both the CLI client and Web GUI.
+## Autopilot Checks (MAVROS / rospy)
 
-Solutions are defined in `server/checks/solutions.py` and auto-attached by `BaseCheck.execute()`.
+Autopilot checks connect via **MAVROS ROS topics** using `rospy`. No direct MAVLink or serial connection is needed from Python.
+
+| Check | Topic | Type |
+|-------|-------|------|
+| AutopilotDetect | `<ns>/state` | `mavros_msgs/State` |
+| AutopilotStatus | `<ns>/battery` | `sensor_msgs/BatteryState` |
+| AutopilotSensors | `<ns>/global_position/raw/fix`, `<ns>/imu/data` | `NavSatFix`, `Imu` |
+
+Configure the MAVROS namespace in `config.json`:
+```json
+"autopilot": {
+  "mavros_ns": "/mavros",
+  "heartbeat_timeout": 10,
+  "battery_voltage_error": 10.5,
+  "battery_voltage_warning": 11.1
+}
+```
+
+If `rospy` is not installed, all autopilot checks are automatically skipped (no crash).
+
+---
 
 ## Simulation Mode Details
 
-When running with `--sim`, all real checks are replaced with simulated versions:
-
-- Each sim check generates realistic-looking results with configurable outcomes
-- Configure in the `sim` section of `config_local.json`:
+When `--sim` is used, all real checks are replaced by `sim_checks.py`:
 
 ```json
-{
-  "sim": {
-    "pass_rate": 0.75,
-    "warning_rate": 0.15,
-    "random_seed": 42,
-    "overrides": {
-      "MetadataCaptureCheck": "passed",
-      "AutopilotParamExportCheck": "warning"
-    }
+"sim": {
+  "pass_rate": 0.75,
+  "warning_rate": 0.15,
+  "random_seed": 42,
+  "overrides": {
+    "MetadataCaptureCheck": "passed",
+    "AutopilotParamExportCheck": "warning"
   }
 }
 ```
 
-- `pass_rate`: Probability of a check passing (0.0-1.0)
-- `warning_rate`: Probability of a warning (from the remaining non-pass pool)
-- `random_seed`: Set for reproducible results, or `null` for random
-- `overrides`: Force specific checks to always return a given status
+| Key | Description |
+|-----|-------------|
+| `pass_rate` | Probability a check passes (0.0–1.0) |
+| `warning_rate` | Probability of warning from the non-pass pool |
+| `random_seed` | Set for reproducible results; `null` for random |
+| `overrides` | Force specific checks to a fixed status |
+
+---
 
 ## Troubleshooting
 
 ### Port already in use
 ```bash
-# Find process using port 5000
-sudo lsof -i :5000
-# Kill if necessary
+sudo lsof -i :5500
 sudo kill -9 <PID>
 ```
 
-### Permission denied for devices
+### Permission denied for serial devices
 ```bash
-# Add user to dialout group for serial devices
-sudo usermod -a -G dialout nvidia
-# Logout and login again
+sudo usermod -a -G dialout ubuntu
+# Log out and back in
 ```
 
 ### ROS checks skipped
-- Install ROS: `sudo apt-get install ros-noetic-desktop-full`
-- Source ROS: Add to `~/.bashrc`: `source /opt/ros/noetic/setup.bash`
-- Set environment variables in config.json
+- Install ROS and source it: `source /opt/ros/noetic/setup.bash`
+- Ensure `ROS_MASTER_URI` is set correctly in `config.json`
 
 ### Autopilot checks failing
-- Check the serial cable and power to the autopilot
-- Verify `autopilot.connection` path in config.json (e.g., `/dev/ttyUSB0`)
-- Verify `autopilot.baud_rate` matches the autopilot's configuration
-- Try increasing `autopilot.heartbeat_timeout` if connection is slow
+- Verify MAVROS is running: `rosnode list | grep mavros`
+- Check the `mavros_ns` setting matches your MAVROS namespace
+- Increase `heartbeat_timeout` if connection is slow
+
+---
 
 ## Configuration Reference
-
-All values in `config.json` with their descriptions:
 
 ```json
 {
   "server": {
-    "host": "0.0.0.0",           // Listen address (0.0.0.0 = all interfaces)
-    "port": 5000,                // HTTP port
-    "debug": false               // Flask debug mode
+    "host": "0.0.0.0",          // Listen on all interfaces
+    "port": 5500,               // HTTP port
+    "debug": false              // Flask debug mode
   },
 
   "test_pc": {
-    "expected_ip": "192.168.1.1" // Test PC IP for connectivity check
+    "expected_ip": "192.168.1.1"  // Test PC IP (for connectivity check)
   },
 
-  "ping_targets": ["192.168.1.1", "192.168.1.3"],  // IPs to ping
+  "ping_targets": ["192.168.1.1", "192.168.1.3"],
 
-  "environment_vars": {          // Expected environment variables
+  "environment_vars": {
     "ROS_MASTER_URI": "http://192.168.1.1:11311",
     "ROS_IP": "192.168.1.2",
     "ROS_HOSTNAME": "jetson-test"
   },
 
-  "devices": {                   // Serial/USB devices to check
+  "devices": {
     "deviceA": {
-      "path": "/dev/ttyUSB0",    // Device path
+      "path": "/dev/ttyUSB0",
       "description": "Custom sensor A",
-      "vendor_id": "0x1234",     // Expected USB vendor ID
-      "product_id": "0x5678",    // Expected USB product ID
-      "baudrate": 9600,          // Serial baud rate
-      "test_command": "AT\r\n",  // Handshake command to send
-      "expected_response": "OK", // Expected handshake response
-      "serial_timeout": 2,       // Serial read timeout (seconds)
-      "read_buffer_size": 200    // Serial read buffer size (bytes)
+      "vendor_id": "0x1234",
+      "product_id": "0x5678",
+      "baudrate": 9600,
+      "test_command": "AT\r\n",
+      "expected_response": "OK"
     }
   },
 
   "autopilot": {
-    "connection": "/dev/ttyAutopilot",  // MAVLink connection string
-    "baud_rate": 921600,                // Serial baud rate
-    "heartbeat_timeout": 10,            // Heartbeat wait timeout (seconds)
-    "message_timeout": 5,               // MAVLink message timeout (seconds)
-    "battery_voltage_error": 10.5,      // Battery voltage error threshold (V)
-    "battery_voltage_warning": 11.1,    // Battery voltage warning threshold (V)
-    "default_params_file": "params/default.param",  // Reference param file
-    "param_tolerance": 0.01             // Param comparison tolerance
+    "mavros_ns": "/mavros",         // MAVROS ROS namespace
+    "heartbeat_timeout": 10,        // Seconds to wait for MAVROS state
+    "battery_voltage_error": 10.5,  // Voltage below this → failed
+    "battery_voltage_warning": 11.1 // Voltage below this → warning
   },
 
   "ros": {
-    "master_uri": "http://192.168.1.1:11311",  // ROS master URI
-    "required_nodes": ["/node1", "/node2"],     // Nodes that must be running
-    "required_topics": {                         // Topics that must be publishing
-      "/camera/image": {
-        "rate_min": 30,                          // Minimum publish rate (Hz)
-        "type": "sensor_msgs/Image"
-      },
-      "/imu/data": {
-        "rate_min": 100,
-        "type": "sensor_msgs/Imu",
-        "value_checks": {                        // Value range checks
-          "angular_velocity": {"max": 10.0},
-          "linear_acceleration": {"max": 50.0}
-        }
-      }
+    "master_uri": "http://192.168.1.1:11311",
+    "required_nodes": ["/node1", "/node2"],
+    "required_topics": {
+      "/camera/image": { "rate_min": 30, "type": "sensor_msgs/Image" },
+      "/imu/data":     { "rate_min": 100, "type": "sensor_msgs/Imu" }
     },
-    "required_frames": ["base_link", "camera_link"],  // Required TF frames
-    "check_timeout": 5.0,                // Rate measurement duration (seconds)
-    "topic_freshness_timeout": 5.0       // Max message age (seconds)
+    "required_frames": ["base_link", "camera_link"],
+    "check_timeout": 5.0,
+    "topic_freshness_timeout": 5.0
   },
 
   "resources": {
-    "cpu_max_percent": 90,         // CPU usage error threshold (%)
-    "ram_max_percent": 85,         // RAM usage error threshold (%)
-    "disk_min_free_gb": 5,         // Minimum free disk space (GB)
-    "temp_max_celsius": 80,        // Temperature error threshold (C)
-    "temp_warning_percent": 90     // Warning at this % of temp_max (e.g., 90 = warn at 72C)
+    "cpu_max_percent": 90,
+    "ram_max_percent": 85,
+    "disk_min_free_gb": 5,
+    "temp_max_celsius": 80,
+    "temp_warning_percent": 90
   },
 
   "network": {
-    "ping_count": 3,               // Number of ping packets
-    "ping_timeout": 3              // Ping timeout per packet (seconds)
+    "ping_count": 3,
+    "ping_timeout": 3
   },
 
   "timeouts": {
-    "command": 10,                 // General subprocess command timeout (seconds)
-    "script": 60                   // Shell script execution timeout (seconds)
+    "command": 10,
+    "script": 60
   },
 
-  "systemd_services": ["roscore", "autopilot-bridge"],  // Services to check
-
-  "udev_rules": ["/etc/udev/rules.d/99-autopilot.rules"],  // udev rule files
+  "systemd_services": ["roscore", "autopilot-bridge", "camera-driver"],
+  "udev_rules": ["/etc/udev/rules.d/99-autopilot.rules"],
 
   "scripts": {
-    "startup": "/home/nvidia/scripts/start_system.sh",  // Optional startup script
-    "log_test": "/home/nvidia/scripts/log_test.sh"      // Optional log test script
+    "startup":  "/home/ubuntu/scripts/start_system.sh",
+    "log_test": "/home/ubuntu/scripts/log_test.sh"
   },
 
   "logging": {
-    "rosbag_dir": "/home/nvidia/rosbags",  // Rosbag directory
-    "min_bag_size_mb": 1,                  // Minimum bag size for pass
-    "max_bag_age_hours": 24                // Maximum bag age
+    "rosbag_dir": "/home/ubuntu/rosbags",
+    "min_bag_size_mb": 1,
+    "max_bag_age_hours": 24
   },
 
   "checks": {
-    "enabled_categories": ["all"],   // Categories to enable ("all" or list)
-    "disabled_checks": [],           // Individual checks to disable
-    "timeout_seconds": 30,           // Per-check timeout
-    "continue_on_failure": true      // Continue after a check fails
+    "enabled_categories": ["all"],
+    "disabled_checks": [],
+    "timeout_seconds": 30,
+    "continue_on_failure": true
+  },
+
+  "developer": {
+    "debug": false    // Set true (or use --debug flag) for source locations + tracebacks
   }
 }
 ```
-
-### Deploying to a New System
-
-1. Copy the project to the target Jetson
-2. Edit `server/config.json`:
-   - Set correct device paths (`/dev/ttyUSB0`, etc.)
-   - Set network IPs (`test_pc.expected_ip`, `ping_targets`)
-   - Set autopilot connection and baud rate
-   - Set ROS nodes and topics for your system
-   - Adjust resource thresholds if needed
-   - Configure systemd services to monitor
-3. (Optional) Create/edit shell scripts in `server/scripts/`
-4. Start the server: `python3 server/test_server.py`
-
-No code changes required.

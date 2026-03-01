@@ -4,11 +4,16 @@ All check classes should inherit from BaseCheck.
 """
 
 import time
+import traceback as tb_module
+import inspect
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, Any
 import sys
 import os
+
+logger = logging.getLogger(__name__)
 
 # Add parent directories to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
@@ -57,6 +62,7 @@ class BaseCheck(ABC):
         self.duration = 0.0
         self.timestamp = None
         self.timeout = config.get('checks', {}).get('timeout_seconds', DEFAULT_CHECK_TIMEOUT)
+        self.debug_mode = config.get('developer', {}).get('debug', False)
 
     @abstractmethod
     def run(self) -> bool:
@@ -89,6 +95,37 @@ class BaseCheck(ABC):
             self.message = f"Exception: {str(e)}"
             self.details["exception"] = str(e)
             self.details["exception_type"] = type(e).__name__
+
+            # Capture the source location (file:line) where the exception originated
+            frames = tb_module.extract_tb(sys.exc_info()[2])
+            source_frame = None
+            for frame in reversed(frames):
+                # Skip frames from base_check.py itself to point at the check's own code
+                if os.path.basename(frame.filename) != 'base_check.py':
+                    source_frame = frame
+                    break
+            if source_frame is None and frames:
+                source_frame = frames[-1]
+
+            if source_frame:
+                try:
+                    rel_path = os.path.relpath(source_frame.filename)
+                except ValueError:
+                    rel_path = source_frame.filename
+                self.details["source_location"] = (
+                    f"{rel_path}:{source_frame.lineno} in {source_frame.name}()"
+                )
+
+            if self.debug_mode:
+                self.details["traceback"] = tb_module.format_exc()
+
+            logger.error(
+                "[%s] %s: %s  -->  %s",
+                self.__class__.__name__,
+                type(e).__name__,
+                str(e),
+                self.details.get("source_location", "unknown location"),
+            )
         finally:
             self.duration = time.time() - start_time
 
@@ -139,3 +176,21 @@ class BaseCheck(ABC):
         self.message = message
         if details:
             self.details.update(details)
+
+        # Capture the caller's source location so developers can see which line triggered the warning
+        caller = inspect.currentframe().f_back
+        if caller:
+            try:
+                rel_path = os.path.relpath(caller.f_code.co_filename)
+            except ValueError:
+                rel_path = caller.f_code.co_filename
+            self.details["source_location"] = (
+                f"{rel_path}:{caller.f_lineno} in {caller.f_code.co_name}()"
+            )
+
+        logger.warning(
+            "[%s] %s  -->  %s",
+            self.__class__.__name__,
+            message,
+            self.details.get("source_location", "unknown location"),
+        )
