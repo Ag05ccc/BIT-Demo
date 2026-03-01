@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIT Documentation — Product Test Built-In Test</title>
+<style>
+  :root {
+    --bg:     #0c0f14;
+    --bg2:    #131821;
+    --bg3:    #1a2232;
+    --bg4:    #0f1520;
+    --text:   #c8d8e8;
+    --text2:  #4e6070;
+    --text3:  #7a94aa;
+    --green:  #00c853;
+    --red:    #ff3d3d;
+    --yellow: #ff9500;
+    --blue:   #4488cc;
+    --cyan:   #00b8d4;
+    --border: #1e2d40;
+    --accent: #1a8cff;
+    --sidebar-w: 260px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.65;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    position: fixed; top:0; left:0; right:0; z-index:100;
+    background: var(--bg2);
+    border-bottom: 2px solid var(--accent);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+  }
+  .topbar-logo {
+    font-size: 17px; font-weight: 800;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text);
+  }
+  .topbar-logo span { color: var(--accent); }
+  .topbar-tag {
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    color: var(--text2); text-transform: uppercase;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+  .topbar-links {
+    margin-left: auto;
+    display: flex; gap: 16px; align-items: center;
+  }
+  .topbar-links a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.2s;
+  }
+  .topbar-links a:hover { color: var(--accent); }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    padding-top: 56px;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: fixed;
+    top: 56px; bottom: 0; left: 0;
+    overflow-y: auto;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .nav-group { margin-bottom: 20px; }
+  .nav-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text2);
+    padding: 0 20px 6px;
+    display: block;
+  }
+  .nav-link {
+    display: block;
+    padding: 7px 20px;
+    font-size: 13px;
+    color: var(--text3);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-link:hover { color: var(--text); background: rgba(26,140,255,0.06); }
+  .nav-link.active { color: var(--accent); border-left-color: var(--accent); background: rgba(26,140,255,0.08); }
+  .nav-sub {
+    padding: 5px 20px 5px 32px;
+    font-size: 12px;
+    color: var(--text2);
+    text-decoration: none;
+    display: block;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-sub:hover { color: var(--text3); }
+
+  /* ── Main content ── */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 900px;
+    padding: 48px 56px 80px;
+  }
+
+  /* ── Section ── */
+  .section { margin-bottom: 64px; }
+  .section-anchor { display: block; position: relative; top: -80px; visibility: hidden; }
+
+  /* ── Typography ── */
+  h1 {
+    font-size: 32px; font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  h1 .accent { color: var(--accent); }
+  h2 {
+    font-size: 22px; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 16px; font-weight: 700;
+    color: var(--text);
+    margin: 28px 0 10px;
+  }
+  h4 {
+    font-size: 13px; font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 20px 0 8px;
+  }
+  p { color: var(--text3); margin-bottom: 14px; }
+  p strong { color: var(--text); font-weight: 600; }
+  ul, ol { padding-left: 20px; margin-bottom: 14px; color: var(--text3); }
+  li { margin-bottom: 4px; }
+  li strong { color: var(--text); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Hero ── */
+  .hero {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 32px 36px;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--accent), var(--cyan), transparent);
+  }
+  .hero p { font-size: 16px; line-height: 1.7; color: var(--text3); margin-bottom: 20px; }
+  .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 4px 12px; border-radius: 100px;
+  }
+  .badge-blue  { background: rgba(26,140,255,0.15); color: var(--accent); border: 1px solid rgba(26,140,255,0.3); }
+  .badge-green { background: rgba(0,200,83,0.12);   color: var(--green);  border: 1px solid rgba(0,200,83,0.3); }
+  .badge-cyan  { background: rgba(0,184,212,0.12);  color: var(--cyan);   border: 1px solid rgba(0,184,212,0.3); }
+  .badge-grey  { background: rgba(78,96,112,0.2);   color: var(--text3);  border: 1px solid var(--border); }
+
+  /* ── Code ── */
+  pre {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 12px 0 18px;
+    position: relative;
+  }
+  pre code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    background: none;
+  }
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--cyan);
+  }
+  .comment { color: var(--text2); }
+  .kw    { color: #cc99cd; }
+  .str   { color: #7ec8a0; }
+  .num   { color: #f08d49; }
+  .fn    { color: var(--accent); }
+  .url-hl{ color: var(--cyan); }
+  .hl-g  { color: var(--green); }
+  .hl-r  { color: var(--red); }
+  .hl-y  { color: var(--yellow); }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 12px 0 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 9px 14px;
+    background: var(--bg2);
+    color: var(--text2);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text3);
+    vertical-align: top;
+  }
+  td strong, td code { }
+  tr:hover td { background: rgba(26,140,255,0.03); }
+  td:first-child { color: var(--text); font-weight: 600; }
+
+  /* ── Cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin: 16px 0 24px;
+  }
+  .card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-icon { font-size: 22px; margin-bottom: 10px; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .card-desc  { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  /* ── Steps ── */
+  .steps { counter-reset: step; }
+  .step {
+    display: flex; gap: 16px;
+    margin-bottom: 20px;
+  }
+  .step-num {
+    counter-increment: step;
+    width: 28px; height: 28px; min-width: 28px;
+    border-radius: 50%;
+    background: rgba(26,140,255,0.15);
+    border: 1px solid rgba(26,140,255,0.4);
+    color: var(--accent);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-body { flex: 1; padding-top: 3px; }
+  .step-body p { margin-bottom: 8px; }
+
+  /* ── Callout ── */
+  .callout {
+    display: flex; gap: 12px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout p { margin: 0; color: inherit; }
+  .callout-blue  { background: rgba(26,140,255,0.08); border: 1px solid rgba(26,140,255,0.2); color: #6ab0f5; }
+  .callout-green { background: rgba(0,200,83,0.07);   border: 1px solid rgba(0,200,83,0.2);   color: #5dd08f; }
+  .callout-yellow{ background: rgba(255,149,0,0.08);  border: 1px solid rgba(255,149,0,0.25);  color: #e8a040; }
+
+  /* ── Architecture diagram ── */
+  .arch-box {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--text3);
+    overflow-x: auto;
+    white-space: pre;
+    margin: 16px 0;
+  }
+
+  /* ── Status pills ── */
+  .pill {
+    display: inline-block;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 100px;
+    letter-spacing: 0.4px;
+  }
+  .pill-get    { background: rgba(0,200,83,0.15);   color: var(--green); }
+  .pill-post   { background: rgba(26,140,255,0.15); color: var(--accent); }
+  .pill-pass   { background: rgba(0,200,83,0.15);   color: var(--green); }
+  .pill-fail   { background: rgba(255,61,61,0.15);  color: var(--red); }
+  .pill-warn   { background: rgba(255,149,0,0.15);  color: var(--yellow); }
+  .pill-skip   { background: rgba(68,136,204,0.15); color: var(--blue); }
+
+  /* ── Check category header ── */
+  .cat-header {
+    display: flex; align-items: center; gap: 12px;
+    margin: 32px 0 14px;
+  }
+  .cat-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    flex-shrink: 0;
+  }
+  .cat-name {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .cat-count {
+    font-size: 11px; color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 1px 8px;
+  }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-left: var(--sidebar-w);
+    padding: 24px 56px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--text2);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 800px) {
+    .sidebar { display: none; }
+    .main, .footer { margin-left: 0; padding: 24px 20px; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<header class="topbar">
+  <div class="topbar-logo">BIT <span>Docs</span></div>
+  <span class="topbar-tag">Built-In Test</span>
+  <nav class="topbar-links">
+    <a href="https://github.com/Ag05ccc/BIT-Demo" target="_blank">GitHub</a>
+    <a href="../README.md">README</a>
+  </nav>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="nav-group">
+    <span class="nav-label">Getting Started</span>
+    <a class="nav-link" href="#overview">Overview</a>
+    <a class="nav-link" href="#architecture">Architecture</a>
+    <a class="nav-link" href="#quickstart">Quick Start</a>
+    <a class="nav-sub" href="#qs-local">Local simulation</a>
+    <a class="nav-sub" href="#qs-launcher">SSH Launcher</a>
+    <a class="nav-sub" href="#qs-manual">Manual SSH</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-label">Server</span>
+    <a class="nav-link" href="#server-setup">Setup &amp; Install</a>
+    <a class="nav-link" href="#server-modes">Run Modes</a>
+    <a class="nav-sub" href="#mode-prod">Production</a>
+    <a class="nav-sub" href="#mode-sim">Simulation</a>
+    <a class="nav-sub" href="#mode-debug">Debug</a>
+    <a class="nav-link" href="#api">API Reference</a>
+    <a class="nav-link" href="#config">Configuration</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-label">Checks</span>
+    <a class="nav-link" href="#checks">All Checks</a>
+    <a class="nav-sub" href="#cat-jetson">Jetson</a>
+    <a class="nav-sub" href="#cat-device">Device</a>
+    <a class="nav-sub" href="#cat-network">Network</a>
+    <a class="nav-sub" href="#cat-ros">ROS</a>
+    <a class="nav-sub" href="#cat-autopilot">Autopilot</a>
+    <a class="nav-sub" href="#cat-system">System</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-label">Client &amp; GUI</span>
+    <a class="nav-link" href="#webgui">Web GUI</a>
+    <a class="nav-link" href="#cli">CLI Client</a>
+    <a class="nav-sub" href="#cli-run">run</a>
+    <a class="nav-sub" href="#cli-status">status</a>
+    <a class="nav-sub" href="#cli-results">results</a>
+    <a class="nav-sub" href="#cli-report">report</a>
+    <a class="nav-link" href="#launcher">Launcher</a>
+    <a class="nav-link" href="#scripting">Scripting API</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-label">Reference</span>
+    <a class="nav-link" href="#exit-codes">Exit Codes</a>
+    <a class="nav-link" href="#troubleshooting">Troubleshooting</a>
+    <a class="nav-link" href="#tests">Running Tests</a>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- ═══════════════════════════════════════════════ OVERVIEW -->
+  <div class="section">
+    <span class="section-anchor" id="overview"></span>
+    <h1>Product Test <span class="accent">BIT</span></h1>
+    <div class="hero">
+      <p>
+        <strong>Built-In Test (BIT)</strong> is a client-server diagnostics application for robotics and drone systems.
+        Test logic runs <strong>on the target device</strong> (Jetson, embedded Linux) with direct access to autopilot,
+        peripherals, and ROS. A Test PC triggers tests and displays live results via browser or CLI — no hardware
+        knowledge required on the operator side.
+      </p>
+      <div class="hero-badges">
+        <span class="badge badge-blue">Python 3.8+</span>
+        <span class="badge badge-blue">Flask REST API</span>
+        <span class="badge badge-green">No JS frameworks</span>
+        <span class="badge badge-green">Stdlib-only client</span>
+        <span class="badge badge-cyan">ROS / MAVROS</span>
+        <span class="badge badge-grey">MIT License</span>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🖥️</div>
+        <div class="card-title">Web GUI</div>
+        <div class="card-desc">Aerospace dark-theme dashboard. Live streaming results, inline fix suggestions, one-click HTML report.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⌨️</div>
+        <div class="card-title">CLI Client</div>
+        <div class="card-desc">ANSI-colour terminal table. Streams rows live. No pip installs — Python stdlib only.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔗</div>
+        <div class="card-title">SSH Launcher</div>
+        <div class="card-desc">One-click connect from your PC. SSHes into the device and starts the server automatically.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧪</div>
+        <div class="card-title">Simulation Mode</div>
+        <div class="card-desc">Run the full stack on any PC — no Jetson, hardware, or ROS required. Great for CI/CD.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐛</div>
+        <div class="card-title">Debug Mode</div>
+        <div class="card-desc">Attaches source file:line references and full Python tracebacks to every error and warning.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📄</div>
+        <div class="card-title">HTML Reports</div>
+        <div class="card-desc">Self-contained printable report with results, solutions, and (in debug mode) tracebacks.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ ARCHITECTURE -->
+  <div class="section">
+    <span class="section-anchor" id="architecture"></span>
+    <h2>Architecture</h2>
+    <p>The system is split into two sides — the Test PC (operator) and the target device (Jetson):</p>
+    <div class="arch-box"><span class="hl-g">┌───────────────────┐</span>  Ethernet / HTTP  <span class="hl-g">┌──────────────────────────────────┐</span>
+<span class="hl-g">│</span>   <span style="color:var(--text)">Test PC</span>         <span class="hl-g">│</span> ◄─────────────── <span class="hl-g">│</span>   <span style="color:var(--text)">Jetson (Target Device)</span>          <span class="hl-g">│</span>
+<span class="hl-g">│</span>  (Windows/Linux)  <span class="hl-g">│</span>                  <span class="hl-g">│</span>                                  <span class="hl-g">│</span>
+<span class="hl-g">│</span>                   <span class="hl-g">│</span>                  <span class="hl-g">│</span>  <span class="url-hl">test_server.py</span>  (Flask REST API) <span class="hl-g">│</span>
+<span class="hl-g">│</span>  <span class="url-hl">launcher.py</span>      <span class="hl-g">│</span>  SSH (start)     <span class="hl-g">│</span>  Web GUI  (port <span class="hl-y">5500</span>)            <span class="hl-g">│</span>
+<span class="hl-g">│</span>  ── CONNECT ──►──────────────────────► │  Check Modules                   <span class="hl-g">│</span>
+<span class="hl-g">│</span>                   <span class="hl-g">│</span>                  <span class="hl-g">│</span>  Direct hardware access          <span class="hl-g">│</span>
+<span class="hl-g">│</span>  Web Browser      <span class="hl-g">│</span>  HTTP (results)  <span class="hl-g">│</span>  ROS / MAVROS topics             <span class="hl-g">│</span>
+<span class="hl-g">│</span>  ◄─────────────────────────────────── <span class="hl-g">│</span>                                  <span class="hl-g">│</span>
+<span class="hl-g">│</span>                   <span class="hl-g">│</span>                  <span class="hl-g">└──────────┬───────────────────────┘</span>
+<span class="hl-g">│</span>  CLI Client       <span class="hl-g">│</span>                            <span class="hl-g">│</span> USB / Serial / I2C
+<span class="hl-g">│</span>  <span class="url-hl">test_client.py</span>  <span class="hl-g">│</span>                 <span class="hl-g">┌──────────┴───────────────────────┐</span>
+<span class="hl-g">└───────────────────┘</span>                 <span class="hl-g">│</span>  Autopilot, Cameras, IMU, GPS…   <span class="hl-g">│</span>
+                                       <span class="hl-g">└──────────────────────────────────┘</span></div>
+
+    <h3>Component Roles</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Runs on</th><th>Port</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/test_server.py</code></td><td>Jetson / target device</td><td>5500</td><td>Flask REST API + Web GUI + check orchestration</td></tr>
+          <tr><td><code>server/templates/index.html</code></td><td>Any browser</td><td>5500</td><td>Aerospace dark-theme single-page dashboard</td></tr>
+          <tr><td><code>client/test_client.py</code></td><td>Test PC (terminal)</td><td>—</td><td>CLI client — streams results, downloads reports</td></tr>
+          <tr><td><code>launcher.py</code></td><td>Test PC</td><td>8080</td><td>SSH-based one-click launcher web page</td></tr>
+          <tr><td><code>run_local.py</code></td><td>Any PC</td><td>5500</td><td>All-in-one local simulation launcher</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ QUICK START -->
+  <div class="section">
+    <span class="section-anchor" id="quickstart"></span>
+    <h2>Quick Start</h2>
+
+    <span class="section-anchor" id="qs-local"></span>
+    <h3>Option 1 — Local Simulation (no hardware)</h3>
+    <p>Run the entire stack on your PC — no Jetson, ROS, or peripherals required.</p>
+    <pre><code><span class="comment"># Install server dependencies</span>
+pip install flask psutil
+
+<span class="comment"># Start sim server + open browser at http://localhost:5500</span>
+python3 run_local.py
+
+<span class="comment"># Or: start server + immediately run all tests via CLI</span>
+python3 run_local.py --run
+
+<span class="comment"># Or: run a single category</span>
+python3 run_local.py --run autopilot</code></pre>
+
+    <span class="section-anchor" id="qs-launcher"></span>
+    <h3>Option 2 — SSH Launcher (recommended for real hardware)</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <p><strong>One-time SSH key setup</strong> on your PC:</p>
+          <pre><code>ssh-copy-id ubuntu@192.168.1.2</code></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <p><strong>Start the launcher</strong> on your PC:</p>
+          <pre><code>pip install flask
+python3 launcher.py       <span class="comment"># opens http://localhost:8080</span></code></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <p>Enter the Jetson IP, click <strong>CONNECT</strong>. The launcher SSHes in, starts <code>test_server.py</code>, then opens the BIT dashboard at <code>http://&lt;jetson-ip&gt;:5500</code> automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <span class="section-anchor" id="qs-manual"></span>
+    <h3>Option 3 — Manual SSH</h3>
+    <pre><code><span class="comment"># Copy project to Jetson (first time only)</span>
+scp -r BIT-Demo ubuntu@192.168.1.2:~/BIT-Demo
+
+<span class="comment"># SSH in and start server</span>
+ssh ubuntu@192.168.1.2
+cd ~/BIT-Demo/server
+pip3 install flask psutil pyserial
+python3 test_server.py</code></pre>
+    <p>Open <code>http://192.168.1.2:5500</code> in your browser.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ SERVER SETUP -->
+  <div class="section">
+    <span class="section-anchor" id="server-setup"></span>
+    <h2>Server Setup</h2>
+
+    <h3>Requirements</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Package</th><th>Version</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>flask</code></td><td>≥ 2.3</td><td>REST API + Web GUI</td></tr>
+          <tr><td><code>psutil</code></td><td>≥ 5.9</td><td>CPU / RAM / disk / temperature metrics</td></tr>
+          <tr><td><code>pyserial</code></td><td>≥ 3.5</td><td>Serial device handshake (optional)</td></tr>
+          <tr><td><code>rospy</code></td><td>ROS install</td><td>Autopilot checks via MAVROS (optional — checks auto-skipped if absent)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code>pip3 install flask psutil pyserial</code></pre>
+
+    <h3>Project layout</h3>
+    <pre><code>BIT-Demo/
+├── common/
+│   ├── models.py               <span class="comment"># TestRun, CheckResult, TestSummary data models</span>
+│   └── constants.py            <span class="comment"># API endpoints, categories, status symbols</span>
+│
+├── server/                     <span class="comment"># Runs on Jetson</span>
+│   ├── test_server.py          <span class="comment"># Flask API + HTML report generator</span>
+│   ├── config.json             <span class="comment"># Production configuration</span>
+│   ├── config_local.json       <span class="comment"># Local / simulation configuration</span>
+│   ├── templates/
+│   │   └── index.html          <span class="comment"># Web GUI (aerospace dark theme)</span>
+│   └── checks/
+│       ├── base_check.py       <span class="comment"># Abstract base — debug mode, source location</span>
+│       ├── jetson_checks.py
+│       ├── device_checks.py
+│       ├── network_checks.py
+│       ├── ros_checks.py
+│       ├── autopilot_checks.py <span class="comment"># Uses rospy + MAVROS topics</span>
+│       ├── system_checks.py
+│       ├── sim_checks.py       <span class="comment"># Simulated checks for --sim mode</span>
+│       └── solutions.py        <span class="comment"># "How to fix" hints for every check</span>
+│
+├── client/                     <span class="comment"># Runs on Test PC</span>
+│   ├── test_client.py
+│   ├── client_config.json      <span class="comment"># Jetson IP / port (production)</span>
+│   ├── client_config_local.json
+│   └── utils/
+│       └── api_client.py       <span class="comment"># urllib HTTP client (no external deps)</span>
+│
+├── launcher.py                 <span class="comment"># PC-side SSH launcher (port 8080)</span>
+└── run_local.py                <span class="comment"># All-in-one local sim launcher</span></code></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ RUN MODES -->
+  <div class="section">
+    <span class="section-anchor" id="server-modes"></span>
+    <h2>Server Run Modes</h2>
+
+    <span class="section-anchor" id="mode-prod"></span>
+    <h3>Production — real hardware</h3>
+    <pre><code>cd ~/BIT-Demo/server
+python3 test_server.py</code></pre>
+
+    <span class="section-anchor" id="mode-sim"></span>
+    <h3>Simulation — no hardware</h3>
+    <p>Replaces all real checks with <code>sim_checks.py</code>. Pass/fail rates and specific overrides are controlled by <code>config_local.json</code>.</p>
+    <pre><code>python3 test_server.py --sim</code></pre>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sim config key</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>pass_rate</code></td><td>float 0–1</td><td>Probability a check passes</td></tr>
+          <tr><td><code>warning_rate</code></td><td>float 0–1</td><td>Probability of warning from the non-pass pool</td></tr>
+          <tr><td><code>random_seed</code></td><td>int | null</td><td>Set for reproducible results; <code>null</code> for random</td></tr>
+          <tr><td><code>overrides</code></td><td>object</td><td>Force specific checks to a fixed status: <code>{"MetadataCaptureCheck": "passed"}</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <span class="section-anchor" id="mode-debug"></span>
+    <h3>Debug mode</h3>
+    <p>Attaches the <strong>source file and line number</strong> of every error/warning to the check result, and includes full Python tracebacks. Both the Web GUI and CLI display this extra information automatically.</p>
+    <pre><code>python3 test_server.py --debug          <span class="comment"># production + debug</span>
+python3 test_server.py --sim --debug    <span class="comment"># simulation + debug</span></code></pre>
+
+    <h3>Keep running after SSH disconnect</h3>
+    <pre><code><span class="comment"># nohup (simple)</span>
+nohup python3 test_server.py > server.log 2>&1 &
+
+<span class="comment"># screen (re-attachable)</span>
+screen -S bit
+python3 test_server.py
+<span class="comment"># Detach: Ctrl+A, D   |   Re-attach: screen -r bit</span></code></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ API REFERENCE -->
+  <div class="section">
+    <span class="section-anchor" id="api"></span>
+    <h2>API Reference</h2>
+    <p>All endpoints are served at <code>http://&lt;device-ip&gt;:5500</code>. JSON in, JSON out (except the report endpoints which return HTML).</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/status</code></td><td>Server health, version, uptime</td></tr>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/system/info</code></td><td>Hostname, OS, CPU, RAM, disk</td></tr>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/config</code></td><td>Current config (secrets excluded)</td></tr>
+          <tr><td><span class="pill pill-post">POST</span></td><td><code>/api/test/run</code></td><td>Start all tests (async)</td></tr>
+          <tr><td><span class="pill pill-post">POST</span></td><td><code>/api/test/run/&lt;category&gt;</code></td><td>Start one category: <code>jetson</code>, <code>device</code>, <code>network</code>, <code>ros</code>, <code>autopilot</code>, <code>system</code></td></tr>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/test/results</code></td><td>Latest test results (all checks)</td></tr>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/test/results/&lt;test_id&gt;</code></td><td>Results for a specific test run ID</td></tr>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/report</code></td><td>Download HTML report for the latest run</td></tr>
+          <tr><td><span class="pill pill-get">GET</span></td><td><code>/api/report/&lt;test_id&gt;</code></td><td>Download HTML report for a specific run</td></tr>
+          <tr><td><span class="pill pill-post">POST</span></td><td><code>/api/autopilot/params/export</code></td><td>Export autopilot parameters to file</td></tr>
+          <tr><td><span class="pill pill-post">POST</span></td><td><code>/api/autopilot/params/compare</code></td><td>Compare params with defaults</td></tr>
+          <tr><td><span class="pill pill-post">POST</span></td><td><code>/api/scripts/start</code></td><td>Run <code>start_system.sh</code></td></tr>
+          <tr><td><span class="pill pill-post">POST</span></td><td><code>/api/scripts/log_test</code></td><td>Run <code>log_test.sh</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Quick curl examples</h3>
+    <pre><code>curl http://localhost:5500/api/status
+curl http://localhost:5500/api/system/info
+curl -X POST http://localhost:5500/api/test/run
+sleep 10
+curl http://localhost:5500/api/test/results</code></pre>
+
+    <h3>Results response schema</h3>
+    <pre><code>{
+  <span class="str">"test_id"</span>: <span class="str">"20260301_143025"</span>,
+  <span class="str">"status"</span>:  <span class="str">"completed"</span>,          <span class="comment">// "running" | "completed"</span>
+  <span class="str">"summary"</span>: {
+    <span class="str">"total"</span>:    <span class="num">21</span>,
+    <span class="str">"passed"</span>:   <span class="num">18</span>,
+    <span class="str">"failed"</span>:   <span class="num">1</span>,
+    <span class="str">"warnings"</span>: <span class="num">1</span>,
+    <span class="str">"skipped"</span>:  <span class="num">1</span>
+  },
+  <span class="str">"results"</span>: [
+    {
+      <span class="str">"name"</span>:     <span class="str">"JetsonBootCheck"</span>,
+      <span class="str">"category"</span>: <span class="str">"jetson"</span>,
+      <span class="str">"status"</span>:   <span class="str">"passed"</span>,         <span class="comment">// "passed" | "failed" | "warning" | "skipped"</span>
+      <span class="str">"message"</span>:  <span class="str">"No boot errors found"</span>,
+      <span class="str">"duration"</span>: <span class="num">0.52</span>,
+      <span class="str">"details"</span>:  { <span class="str">"solution"</span>: <span class="str">"..."</span>, <span class="str">"source"</span>: <span class="str">"checks/jetson_checks.py:34"</span> }
+    }
+  ]
+}</code></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ CONFIGURATION -->
+  <div class="section">
+    <span class="section-anchor" id="config"></span>
+    <h2>Configuration</h2>
+    <p>All behaviour is controlled by JSON files — no code changes needed for deployment.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/config.json</code></td><td>Production: device paths, IPs, thresholds, timeouts</td></tr>
+          <tr><td><code>server/config_local.json</code></td><td>Sim/dev: localhost settings, pass/fail rates</td></tr>
+          <tr><td><code>client/client_config.json</code></td><td>Client: Jetson IP (192.168.1.2), port (5500)</td></tr>
+          <tr><td><code>client/client_config_local.json</code></td><td>Client: localhost (127.0.0.1), port (5500)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Full config reference</h3>
+    <pre><code>{
+  <span class="str">"server"</span>: {
+    <span class="str">"host"</span>:  <span class="str">"0.0.0.0"</span>,   <span class="comment">// listen on all interfaces</span>
+    <span class="str">"port"</span>:  <span class="num">5500</span>,
+    <span class="str">"debug"</span>: <span class="kw">false</span>
+  },
+
+  <span class="str">"test_pc"</span>: { <span class="str">"expected_ip"</span>: <span class="str">"192.168.1.1"</span> },
+
+  <span class="str">"ping_targets"</span>: [<span class="str">"192.168.1.1"</span>, <span class="str">"192.168.1.3"</span>],
+
+  <span class="str">"environment_vars"</span>: {
+    <span class="str">"ROS_MASTER_URI"</span>: <span class="str">"http://192.168.1.1:11311"</span>,
+    <span class="str">"ROS_IP"</span>: <span class="str">"192.168.1.2"</span>
+  },
+
+  <span class="str">"devices"</span>: {
+    <span class="str">"deviceA"</span>: {
+      <span class="str">"path"</span>:              <span class="str">"/dev/ttyUSB0"</span>,
+      <span class="str">"description"</span>:      <span class="str">"Custom sensor A"</span>,
+      <span class="str">"vendor_id"</span>:         <span class="str">"0x1234"</span>,
+      <span class="str">"product_id"</span>:        <span class="str">"0x5678"</span>,
+      <span class="str">"baudrate"</span>:          <span class="num">9600</span>,
+      <span class="str">"test_command"</span>:      <span class="str">"AT\r\n"</span>,
+      <span class="str">"expected_response"</span>: <span class="str">"OK"</span>
+    }
+  },
+
+  <span class="str">"autopilot"</span>: {
+    <span class="str">"mavros_ns"</span>:               <span class="str">"/mavros"</span>,
+    <span class="str">"heartbeat_timeout"</span>:       <span class="num">10</span>,
+    <span class="str">"battery_voltage_error"</span>:   <span class="num">10.5</span>,
+    <span class="str">"battery_voltage_warning"</span>: <span class="num">11.1</span>
+  },
+
+  <span class="str">"ros"</span>: {
+    <span class="str">"master_uri"</span>:      <span class="str">"http://192.168.1.1:11311"</span>,
+    <span class="str">"required_nodes"</span>:  [<span class="str">"/node1"</span>, <span class="str">"/node2"</span>],
+    <span class="str">"required_topics"</span>: {
+      <span class="str">"/camera/image"</span>: { <span class="str">"rate_min"</span>: <span class="num">30</span>,  <span class="str">"type"</span>: <span class="str">"sensor_msgs/Image"</span> },
+      <span class="str">"/imu/data"</span>:     { <span class="str">"rate_min"</span>: <span class="num">100</span>, <span class="str">"type"</span>: <span class="str">"sensor_msgs/Imu"</span> }
+    },
+    <span class="str">"required_frames"</span>: [<span class="str">"base_link"</span>, <span class="str">"camera_link"</span>],
+    <span class="str">"check_timeout"</span>:   <span class="num">5.0</span>
+  },
+
+  <span class="str">"resources"</span>: {
+    <span class="str">"cpu_max_percent"</span>:    <span class="num">90</span>,
+    <span class="str">"ram_max_percent"</span>:    <span class="num">85</span>,
+    <span class="str">"disk_min_free_gb"</span>:   <span class="num">5</span>,
+    <span class="str">"temp_max_celsius"</span>:   <span class="num">80</span>,
+    <span class="str">"temp_warning_percent"</span>: <span class="num">90</span>
+  },
+
+  <span class="str">"systemd_services"</span>: [<span class="str">"roscore"</span>, <span class="str">"autopilot-bridge"</span>, <span class="str">"camera-driver"</span>],
+
+  <span class="str">"checks"</span>: {
+    <span class="str">"enabled_categories"</span>: [<span class="str">"all"</span>],
+    <span class="str">"disabled_checks"</span>:    [],
+    <span class="str">"timeout_seconds"</span>:    <span class="num">30</span>,
+    <span class="str">"continue_on_failure"</span>: <span class="kw">true</span>
+  },
+
+  <span class="str">"developer"</span>: {
+    <span class="str">"debug"</span>: <span class="kw">false</span>    <span class="comment">// set true (or --debug flag) for source locations + tracebacks</span>
+  }
+}</code></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ CHECKS -->
+  <div class="section">
+    <span class="section-anchor" id="checks"></span>
+    <h2>Check Reference</h2>
+    <p>Checks are grouped into six categories. Each check produces one of four statuses:</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 24px">
+      <span class="pill pill-pass">passed</span> — all good
+      <span class="pill pill-warn">warning</span> — degraded but non-critical
+      <span class="pill pill-fail">failed</span> — critical problem
+      <span class="pill pill-skip">skipped</span> — prerequisite missing (e.g. rospy not installed)
+    </div>
+
+    <!-- JETSON -->
+    <span class="section-anchor" id="cat-jetson"></span>
+    <div class="cat-header">
+      <div class="cat-dot" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></div>
+      <div class="cat-name">Jetson</div>
+      <div class="cat-count">3 checks</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>What it tests</th><th>Failure condition</th></tr></thead>
+        <tbody>
+          <tr><td><code>JetsonBootCheck</code></td><td>Scans kernel and journal logs for boot errors</td><td>Any error pattern found in dmesg / journalctl</td></tr>
+          <tr><td><code>JetsonResourcesCheck</code></td><td>CPU %, RAM %, free disk space</td><td>CPU &gt; 90%, RAM &gt; 85%, disk &lt; 5 GB free (configurable)</td></tr>
+          <tr><td><code>JetsonTemperatureCheck</code></td><td>CPU / GPU temperature via thermal zones</td><td>Warning above 90% of max; fail at max (configurable)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DEVICE -->
+    <span class="section-anchor" id="cat-device"></span>
+    <div class="cat-header">
+      <div class="cat-dot" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></div>
+      <div class="cat-name">Device</div>
+      <div class="cat-count">5 checks</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>What it tests</th><th>Failure condition</th></tr></thead>
+        <tbody>
+          <tr><td><code>UdevRulesCheck</code></td><td>Udev rule files exist in <code>/etc/udev/rules.d/</code></td><td>Any configured rule file is missing</td></tr>
+          <tr><td><code>DeviceExistsCheck</code></td><td>Device paths (e.g. <code>/dev/ttyUSB0</code>) exist</td><td>Device path not present in filesystem</td></tr>
+          <tr><td><code>DeviceHardwareIDCheck</code></td><td>USB vendor/product ID via <code>lsusb</code></td><td>Expected vendor:product not found</td></tr>
+          <tr><td><code>DevicePermissionsCheck</code></td><td>Read/write permissions on device file</td><td>Current user cannot read or write device</td></tr>
+          <tr><td><code>DeviceHandshakeCheck</code></td><td>Opens serial port, sends command, checks response</td><td>Timeout, connection error, or unexpected response</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- NETWORK -->
+    <span class="section-anchor" id="cat-network"></span>
+    <div class="cat-header">
+      <div class="cat-dot" style="background:var(--accent);box-shadow:0 0 8px var(--accent)"></div>
+      <div class="cat-name">Network</div>
+      <div class="cat-count">3 checks</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>What it tests</th><th>Failure condition</th></tr></thead>
+        <tbody>
+          <tr><td><code>NetworkInterfaceCheck</code></td><td>Network interfaces are up and assigned IPs</td><td>Interface down or no IP address</td></tr>
+          <tr><td><code>PingTestCheck</code></td><td>Pings all targets in <code>ping_targets</code></td><td>Any ping target unreachable</td></tr>
+          <tr><td><code>TestPCConnectivityCheck</code></td><td>Pings the Test PC's expected IP specifically</td><td>Test PC is not reachable from the device</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ROS -->
+    <span class="section-anchor" id="cat-ros"></span>
+    <div class="cat-header">
+      <div class="cat-dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></div>
+      <div class="cat-name">ROS</div>
+      <div class="cat-count">7 checks</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>What it tests</th><th>Failure condition</th></tr></thead>
+        <tbody>
+          <tr><td><code>ROSMasterCheck</code></td><td>Connects to <code>ROS_MASTER_URI</code></td><td>rosmaster not reachable at configured URI</td></tr>
+          <tr><td><code>ROSNodesCheck</code></td><td>All required nodes in <code>rosnode list</code></td><td>Any required node is missing</td></tr>
+          <tr><td><code>ROSTopicsCheck</code></td><td>Required topics exist with correct message types</td><td>Topic missing or wrong type</td></tr>
+          <tr><td><code>TopicRateCheck</code></td><td>Measures publish rate over 1 s window</td><td>Rate below configured <code>rate_min</code></td></tr>
+          <tr><td><code>TopicFreshnessCheck</code></td><td>Last message timestamp is recent</td><td>Message older than <code>topic_freshness_timeout</code></td></tr>
+          <tr><td><code>TFFramesCheck</code></td><td>TF tree contains required coordinate frames</td><td>Any required frame not in TF tree</td></tr>
+          <tr><td><code>RosbagCheck</code></td><td>Rosbag files in logging dir are fresh and large enough</td><td>No bags found, bag too old, or bag too small</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- AUTOPILOT -->
+    <span class="section-anchor" id="cat-autopilot"></span>
+    <div class="cat-header">
+      <div class="cat-dot" style="background:var(--yellow);box-shadow:0 0 8px var(--yellow)"></div>
+      <div class="cat-name">Autopilot</div>
+      <div class="cat-count">5 checks</div>
+    </div>
+    <div class="callout callout-blue">
+      <div class="callout-icon">ℹ</div>
+      <p>Autopilot checks use <strong>rospy</strong> + MAVROS ROS topics. If <code>rospy</code> is not installed, all checks in this category are automatically <span class="pill pill-skip">skipped</span> — no crash.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>Topic / Source</th><th>Failure condition</th></tr></thead>
+        <tbody>
+          <tr><td><code>AutopilotDetectCheck</code></td><td><code>&lt;ns&gt;/state</code> — <code>mavros_msgs/State</code></td><td>No heartbeat within <code>heartbeat_timeout</code> seconds</td></tr>
+          <tr><td><code>AutopilotStatusCheck</code></td><td><code>&lt;ns&gt;/battery</code> — <code>sensor_msgs/BatteryState</code></td><td>Voltage below warning or error threshold</td></tr>
+          <tr><td><code>AutopilotParamsCheck</code></td><td>MAVLink parameter server via MAVROS</td><td>Critical param missing or out of expected range</td></tr>
+          <tr><td><code>AutopilotParamExportCheck</code></td><td>MAVLink parameter server</td><td>Export fails or file not written</td></tr>
+          <tr><td><code>AutopilotSensorsCheck</code></td><td><code>&lt;ns&gt;/global_position/raw/fix</code>, <code>&lt;ns&gt;/imu/data</code></td><td>GPS or IMU not publishing</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SYSTEM -->
+    <span class="section-anchor" id="cat-system"></span>
+    <div class="cat-header">
+      <div class="cat-dot" style="background:var(--red);box-shadow:0 0 8px var(--red)"></div>
+      <div class="cat-name">System</div>
+      <div class="cat-count">6 checks</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>What it tests</th><th>Failure condition</th></tr></thead>
+        <tbody>
+          <tr><td><code>SystemdServicesCheck</code></td><td>All configured systemd services are <code>active (running)</code></td><td>Any service failed, stopped, or not found</td></tr>
+          <tr><td><code>EnvironmentCheck</code></td><td>Required env vars (<code>ROS_MASTER_URI</code>, <code>ROS_IP</code>, …) are set</td><td>Any env var missing or empty</td></tr>
+          <tr><td><code>TimeCheck</code></td><td>NTP sync status and clock accuracy</td><td>NTP not synchronized or clock offset too high</td></tr>
+          <tr><td><code>StartupScriptCheck</code></td><td>Runs the startup shell script and checks exit code</td><td>Script not found, permission denied, or non-zero exit</td></tr>
+          <tr><td><code>LoggingCheck</code></td><td>Rosbag dir exists, bags are fresh and large enough</td><td>Dir missing, no bags, bag stale, or bag too small</td></tr>
+          <tr><td><code>MetadataCaptureCheck</code></td><td>System metadata (hostname, serial, OS) is capturable</td><td>Cannot read required system identifiers</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ WEB GUI -->
+  <div class="section">
+    <span class="section-anchor" id="webgui"></span>
+    <h2>Web GUI</h2>
+    <p>Open <code>http://&lt;device-ip&gt;:5500</code> in any browser on the same network.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Live streaming</div>
+        <div class="card-desc">Result rows appear as each check completes — no refresh needed.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Category buttons</div>
+        <div class="card-desc">Run all, or pick: Jetson, Device, Network, ROS, Autopilot, System.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Progress bar</div>
+        <div class="card-desc">Colour-segmented green / amber / red as results arrive.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Inline solutions</div>
+        <div class="card-desc">"How to fix" hints shown below failed / warning rows automatically.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Details panel</div>
+        <div class="card-desc">Click any row for message, solution, source location, traceback.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Export Report</div>
+        <div class="card-desc">Downloads a self-contained printable HTML report for the latest run.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ CLI CLIENT -->
+  <div class="section">
+    <span class="section-anchor" id="cli"></span>
+    <h2>CLI Client</h2>
+    <p>Runs on the Test PC. No external dependencies — uses Python stdlib only (<code>urllib</code>, <code>json</code>, <code>argparse</code>).</p>
+    <pre><code><span class="comment"># Configure Jetson IP</span>
+nano client/client_config.json
+
+<span class="comment"># Local testing (server on same machine)</span>
+python3 client/test_client.py --config client/client_config_local.json run</code></pre>
+
+    <span class="section-anchor" id="cli-run"></span>
+    <h3>run — Start tests</h3>
+    <pre><code>python3 client/test_client.py run              <span class="comment"># all categories</span>
+python3 client/test_client.py run autopilot    <span class="comment"># one category</span>
+python3 client/test_client.py run ros
+python3 client/test_client.py run network</code></pre>
+    <p>Results stream live to the terminal as each check completes. A summary and solution suggestions appear at the end.</p>
+
+    <span class="section-anchor" id="cli-status"></span>
+    <h3>status — Server info</h3>
+    <pre><code>python3 client/test_client.py status</code></pre>
+    <p>Shows hostname, OS, CPU, RAM, disk of the target device.</p>
+
+    <span class="section-anchor" id="cli-results"></span>
+    <h3>results — Latest results</h3>
+    <pre><code>python3 client/test_client.py results</code></pre>
+    <p>Displays the most recent test run without triggering a new one.</p>
+
+    <span class="section-anchor" id="cli-report"></span>
+    <h3>report — Download HTML report</h3>
+    <pre><code>python3 client/test_client.py report</code></pre>
+    <p>Downloads a self-contained HTML report and saves it locally as <code>bit_report_&lt;test_id&gt;.html</code>.</p>
+
+    <h3>export-params / compare-params</h3>
+    <pre><code>python3 client/test_client.py export-params    <span class="comment"># export autopilot params</span>
+python3 client/test_client.py compare-params   <span class="comment"># compare with defaults</span></code></pre>
+
+    <h3>Custom config path</h3>
+    <pre><code>python3 client/test_client.py --config /path/to/my_config.json run</code></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ LAUNCHER -->
+  <div class="section">
+    <span class="section-anchor" id="launcher"></span>
+    <h2>SSH Launcher</h2>
+    <p><code>launcher.py</code> is a small Flask web app (port <strong>8080</strong>) that runs on your PC and provides a graphical entry point to start the BIT server on the device via SSH.</p>
+
+    <pre><code><span class="comment"># One-time SSH key setup</span>
+ssh-copy-id ubuntu@192.168.1.2
+
+<span class="comment"># Start launcher (opens http://localhost:8080)</span>
+python3 launcher.py</code></pre>
+
+    <div class="callout callout-green">
+      <div class="callout-icon">✓</div>
+      <p>If the BIT server is <strong>already running</strong> on the device, the launcher page detects it on load and shows an <strong>Open Dashboard</strong> button immediately — no SSH needed.</p>
+    </div>
+
+    <h3>How it works</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><p>Enter device IP and click <strong>CONNECT</strong>.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><p>Launcher SSHes in (<code>BatchMode=yes</code> — key auth required), kills any existing server instance, and starts a fresh one with <code>nohup python3 test_server.py &gt; /tmp/bit_server.log 2&gt;&amp;1 &amp;</code>.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><p>Polls <code>/api/status</code> up to 30 s until the server responds.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body"><p>Auto-opens the BIT dashboard at <code>http://&lt;device-ip&gt;:5500</code> in a new browser tab.</p></div>
+      </div>
+    </div>
+
+    <h3>Advanced options</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Device IP</td><td>From <code>client_config.json</code></td><td>IP address of the target device</td></tr>
+          <tr><td>Port</td><td>5500</td><td>BIT server port</td></tr>
+          <tr><td>SSH User</td><td><code>ubuntu</code></td><td>Username for SSH login</td></tr>
+          <tr><td>SSH Key</td><td>(system default)</td><td>Path to private key file (optional)</td></tr>
+          <tr><td>Remote path</td><td><code>~/BIT-Demo</code></td><td>Path to BIT-Demo on the device</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ SCRIPTING -->
+  <div class="section">
+    <span class="section-anchor" id="scripting"></span>
+    <h2>Scripting API</h2>
+    <p>Use <code>APIClient</code> directly for CI/CD pipelines or custom automation:</p>
+    <pre><code><span class="kw">import</span> sys, os, time
+sys.path.insert(<span class="num">0</span>, <span class="str">'path/to/BIT-Demo'</span>)
+<span class="kw">from</span> client.utils.api_client <span class="kw">import</span> APIClient
+
+client = <span class="fn">APIClient</span>(<span class="str">'http://192.168.1.2:5500'</span>)
+
+<span class="comment"># Start tests</span>
+resp    = client.<span class="fn">run_tests</span>()          <span class="comment"># or run_tests(category='ros')</span>
+test_id = resp[<span class="str">'test_id'</span>]
+
+<span class="comment"># Poll until complete</span>
+<span class="kw">while</span> <span class="kw">True</span>:
+    results = client.<span class="fn">get_results</span>(test_id)
+    <span class="kw">if</span> results[<span class="str">'status'</span>] == <span class="str">'completed'</span>:
+        <span class="kw">break</span>
+    time.<span class="fn">sleep</span>(<span class="num">1</span>)
+
+<span class="comment"># Check outcome</span>
+summary = results[<span class="str">'summary'</span>]
+<span class="fn">print</span>(<span class="str">f"Passed: {summary['passed']}/{summary['total']}"</span>)
+
+<span class="kw">for</span> r <span class="kw">in</span> results[<span class="str">'results'</span>]:
+    <span class="kw">if</span> r[<span class="str">'status'</span>] == <span class="str">'failed'</span>:
+        <span class="fn">print</span>(<span class="str">f"FAIL: {r['name']} — {r['message']}"</span>)
+
+<span class="comment"># Download HTML report</span>
+report_bytes = client.<span class="fn">get_report</span>(test_id)
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">f"report_{test_id}.html"</span>, <span class="str">'wb'</span>) <span class="kw">as</span> f:
+    f.<span class="fn">write</span>(report_bytes)</code></pre>
+
+    <h3>CI/CD integration</h3>
+    <pre><code>python3 client/test_client.py run
+<span class="kw">if</span> [ $? -eq 0 ]; <span class="kw">then</span> <span class="fn">echo</span> <span class="str">"PASS"</span>; <span class="kw">else</span> <span class="fn">echo</span> <span class="str">"FAIL"</span>; <span class="fn">exit</span> 1; <span class="kw">fi</span></code></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ EXIT CODES -->
+  <div class="section">
+    <span class="section-anchor" id="exit-codes"></span>
+    <h2>Exit Codes</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>0</code></td><td>All checks passed</td></tr>
+          <tr><td><code>1</code></td><td>One or more checks failed, or connection error</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ TROUBLESHOOTING -->
+  <div class="section">
+    <span class="section-anchor" id="troubleshooting"></span>
+    <h2>Troubleshooting</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Cannot connect to server</td><td>Verify server is running; check IP in <code>client_config.json</code>; ping device</td></tr>
+          <tr><td>Port refused</td><td>Default port is <strong>5500</strong> — make sure config matches; check firewall rules</td></tr>
+          <tr><td>SSH CONNECT fails</td><td>Run <code>ssh-copy-id ubuntu@&lt;ip&gt;</code> first — key auth is required (<code>BatchMode=yes</code>)</td></tr>
+          <tr><td>Port already in use</td><td><code>sudo lsof -i :5500</code> → <code>sudo kill -9 &lt;PID&gt;</code></td></tr>
+          <tr><td>Permission denied for serial devices</td><td><code>sudo usermod -a -G dialout ubuntu</code> and log out/in</td></tr>
+          <tr><td>ROS checks skipped</td><td>Source ROS: <code>source /opt/ros/noetic/setup.bash</code>; ensure <code>ROS_MASTER_URI</code> is set in config</td></tr>
+          <tr><td>Autopilot checks failing</td><td>Verify MAVROS: <code>rosnode list | grep mavros</code>; check <code>mavros_ns</code> in config; increase <code>heartbeat_timeout</code></td></tr>
+          <tr><td>Slow response / timeout</td><td>Increase <code>timeout</code> in client config; some checks (ROS rate measurement) take several seconds by design</td></tr>
+          <tr><td>Results not updating</td><td>Only one test can run at a time — wait for the current run to finish</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ TESTS -->
+  <div class="section">
+    <span class="section-anchor" id="tests"></span>
+    <h2>Running Tests</h2>
+    <pre><code><span class="comment"># Install test dependencies</span>
+pip install pytest pytest-cov flask psutil
+
+<span class="comment"># Run all tests</span>
+python -m pytest tests/ -v
+
+<span class="comment"># Run with coverage</span>
+python -m pytest tests/ --cov=server --cov=client --cov=common -v</code></pre>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Test file</th><th>Coverage</th></tr></thead>
+        <tbody>
+          <tr><td><code>tests/test_jetson_checks.py</code></td><td>JetsonBootCheck, JetsonResourcesCheck, JetsonTemperatureCheck</td></tr>
+          <tr><td><code>tests/test_device_checks.py</code></td><td>UdevRulesCheck, DeviceExistsCheck, DeviceHardwareIDCheck, DevicePermissionsCheck, DeviceHandshakeCheck</td></tr>
+          <tr><td><code>tests/test_network_checks.py</code></td><td>NetworkInterfaceCheck, PingTestCheck, TestPCConnectivityCheck</td></tr>
+          <tr><td><code>tests/test_ros_checks.py</code></td><td>ROSMasterCheck, ROSNodesCheck, ROSTopicsCheck, TFFramesCheck, RosbagCheck</td></tr>
+          <tr><td><code>tests/test_autopilot_checks.py</code></td><td>AutopilotDetectCheck, AutopilotStatusCheck, AutopilotParamsCheck, AutopilotParamExportCheck, AutopilotSensorsCheck</td></tr>
+          <tr><td><code>tests/test_system_checks.py</code></td><td>SystemdServicesCheck, EnvironmentCheck, TimeCheck, StartupScriptCheck, LoggingCheck, MetadataCaptureCheck</td></tr>
+          <tr><td><code>tests/test_server_api.py</code></td><td>All Flask API endpoints (status, config, system info, run, results, report, scripts)</td></tr>
+          <tr><td><code>tests/test_api_client.py</code></td><td>APIClient methods, HTTP error handling</td></tr>
+          <tr><td><code>tests/test_models.py</code></td><td>CheckResult, TestRun, TestSummary, SystemInfo serialization</td></tr>
+          <tr><td><code>tests/test_base_check.py</code></td><td>BaseCheck init, execute, skip, warn, debug mode</td></tr>
+          <tr><td><code>tests/test_e2e.py</code></td><td>End-to-end flow, check registry, config validation, model serialization</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <span>Product Test BIT — MIT License</span>
+  <span>Built for robotics &amp; drone systems · <a href="https://github.com/Ag05ccc/BIT-Demo" target="_blank">GitHub</a></span>
+</footer>
+
+<script>
+  // Highlight active sidebar link on scroll
+  const sections = document.querySelectorAll('.section-anchor');
+  const navLinks = document.querySelectorAll('.nav-link');
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(s => {
+      const top = s.getBoundingClientRect().top;
+      if (top < 100) current = s.id;
+    });
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === '#' + current) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+</body>
+</html>
